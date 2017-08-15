@@ -1,0 +1,6 @@
+click
+pandas
+sqlalchemy
+six
+flask
+flask-admin
