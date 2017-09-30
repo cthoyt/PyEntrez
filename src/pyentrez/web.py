@@ -8,23 +8,24 @@ from .download import Manager
 from .models import Species, Gene
 
 
+def add_admin_views(app, session):
+    """Adds the administrator views"""
+    admin = Admin(app, template_mode='bootstrap3')
+    admin.add_view(ModelView(Species, session))
+    admin.add_view(ModelView(Gene, session))
+    return admin
+
+
 def get_app():
     """Builds a Flask application
 
     :rtype: flask.Flask
     """
     app = Flask(__name__)
-
-    admin = Admin(app, template_mode='bootstrap3')
-
     manager = Manager()
-
-    admin.add_view(ModelView(Species, manager.session))
-    admin.add_view(ModelView(Gene, manager.session))
-
+    add_admin_views(app, manager.session)
     return app
 
 
 if __name__ == '__main__':
-    app = get_app()
-    app.run()
+    get_app().run()
