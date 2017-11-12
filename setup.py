@@ -14,7 +14,8 @@ INSTALL_REQUIRES = [
     'sqlalchemy',
     'six',
     'flask',
-    'flask-admin'
+    'flask-admin',
+    'tqdm'
 ]
 ENTRY_POINTS = {
     'console_scripts': [

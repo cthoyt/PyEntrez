@@ -4,3 +4,4 @@ sqlalchemy
 six
 flask
 flask-admin
+tqdm
