@@ -11,7 +11,7 @@ from .web import get_app
 
 @click.group()
 def main():
-    """PyEntrez"""
+    """Entrez to BEL"""
     logging.basicConfig(level=logging.INFO)
 
 

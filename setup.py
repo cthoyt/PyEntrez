@@ -18,6 +18,9 @@ INSTALL_REQUIRES = [
     'tqdm'
 ]
 ENTRY_POINTS = {
+    'bio2bel': [
+        'entrez = pyentrez',
+    ],
     'console_scripts': [
         'pyentrez = pyentrez.cli:main',
     ]
