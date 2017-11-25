@@ -68,14 +68,14 @@ class Manager(object):
         df = get_entrez_df(url=url)
 
         if tax_id_filter is not None:
+            tax_id_filter = set(tax_id_filter)
             log.info('filtering to %s', tax_id_filter)
             df = df[df['#tax_id'].isin(tax_id_filter)]
 
         log.info('preparing models')
         species_cache = {}
 
-        for idx, tax_id, gene_id, symbol, xrefs, description, type_of_gene in tqdm(df.itertuples(),
-                                                                                   total=len(df.index)):
+        for idx, tax_id, gene_id, symbol, xrefs, descr, type_of_gene in tqdm(df.itertuples(), total=len(df.index)):
             tax_id = int(tax_id)
             gene_id = int(gene_id)
 
@@ -90,7 +90,7 @@ class Manager(object):
                 species=species,
                 entrez_id=gene_id,
                 entrez_symbol=symbol,
-                description=description,
+                description=descr,
                 type_of_gene=type_of_gene,
             )
 

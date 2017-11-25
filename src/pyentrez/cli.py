@@ -16,7 +16,8 @@ def main():
 
 @main.command()
 @click.option('-c', '--connection', help='Defaults to {}'.format(DEFAULT_CACHE_CONNECTION))
-@click.option('-t', '--tax-id', help='Keep this taxonomy identifier. Can specify multiple', multiple=True)
+@click.option('-t', '--tax-id', default=['9606'], multiple=True,
+              help='Keep this taxonomy identifier. Can specify multiple. Defaults to just human')
 def populate(connection, tax_id):
     """Populates the database"""
     m = Manager(connection=connection)
@@ -24,10 +25,11 @@ def populate(connection, tax_id):
 
 
 @main.command()
-def drop():
+@click.option('-c', '--connection', help='Defaults to {}'.format(DEFAULT_CACHE_CONNECTION))
+def drop(connection):
     """Drops database"""
     if click.confirm('Drop everything?'):
-        m = Manager()
+        m = Manager(connection=connection)
         m.drop_all()
 
 
