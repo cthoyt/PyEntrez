@@ -6,7 +6,6 @@ import click
 
 from .constants import DEFAULT_CACHE_CONNECTION
 from .manager import Manager
-from .web import get_app
 
 
 @click.group()
@@ -39,6 +38,7 @@ def drop():
 @click.option('-h', '--host')
 def web(connection, debug, port, host):
     """Run the admin interface"""
+    from .web import get_app
     app = get_app(connection=connection)
     app.run(debug=debug, port=port, host=host)
 

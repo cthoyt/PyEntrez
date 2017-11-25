@@ -8,7 +8,7 @@ from pyentrez.manager import Manager
 from pyentrez.models import Gene, Species, Xref
 
 
-def add_admin_views(app, session, url='/'):
+def add_admin(app, session, url='/'):
     """Adds the administrator views
 
     :param flask.Flask app: A Flask application
@@ -29,7 +29,7 @@ def get_app(connection=None):
     """
     app = Flask(__name__)
     manager = Manager(connection=connection)
-    add_admin_views(app, manager.session)
+    add_admin(app, manager.session)
     return app
 
 
