@@ -15,7 +15,8 @@ INSTALL_REQUIRES = [
     'six',
     'flask',
     'flask-admin',
-    'tqdm'
+    'tqdm',
+    'bio2bel',
 ]
 ENTRY_POINTS = {
     'bio2bel': [

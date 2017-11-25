@@ -5,3 +5,4 @@ six
 flask
 flask-admin
 tqdm
+bio2bel
