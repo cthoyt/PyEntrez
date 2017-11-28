@@ -4,8 +4,8 @@ from flask import Flask
 from flask_admin import Admin
 from flask_admin.contrib.sqla import ModelView
 
-from pyentrez.manager import Manager
-from pyentrez.models import Gene, Species, Xref, Homologene
+from .manager import Manager
+from .models import Gene, Homologene, Species, Xref
 
 
 def add_admin(app, session, **kwargs):
@@ -34,7 +34,3 @@ def create_application(connection=None, url=None):
     manager = Manager(connection=connection)
     add_admin(app, manager.session, url=url)
     return app
-
-
-if __name__ == '__main__':
-    create_application().run(debug=True, port=5000, host='0.0.0.0')

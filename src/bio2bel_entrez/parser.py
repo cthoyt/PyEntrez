@@ -6,9 +6,8 @@ from urllib.request import urlretrieve
 
 import pandas as pd
 
-from pyentrez.constants import (
-    GENE_INFO_DATA_PATH, GENE_INFO_URL, HOMOLOGENE_DATA_PATH, HOMOLOGENE_URL,
-    gene_info_columns, homologene_columns,
+from .constants import (
+    GENE_INFO_DATA_PATH, GENE_INFO_URL, HOMOLOGENE_DATA_PATH, HOMOLOGENE_URL, gene_info_columns, homologene_columns,
 )
 
 log = logging.getLogger(__name__)

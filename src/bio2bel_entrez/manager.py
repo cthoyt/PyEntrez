@@ -7,9 +7,9 @@ from sqlalchemy.orm import sessionmaker
 from tqdm import tqdm
 
 from pybel.constants import FUNCTION, GENE, IDENTIFIER, IS_A, NAME, NAMESPACE
-from pyentrez.constants import DEFAULT_CACHE_CONNECTION
-from pyentrez.models import Base, Gene, Homologene, Species, Xref
-from pyentrez.parser import get_entrez_df, get_homologene_df
+from .constants import DEFAULT_CACHE_CONNECTION
+from .models import Base, Gene, Homologene, Species, Xref
+from .parser import get_entrez_df, get_homologene_df
 
 log = logging.getLogger(__name__)
 
