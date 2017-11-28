@@ -35,13 +35,13 @@ def drop(connection):
 
 @main.command()
 @click.option('-c', '--connection', help='Defaults to {}'.format(DEFAULT_CACHE_CONNECTION))
-@click.option('-v', '--debug')
+@click.option('-v', '--debug', is_flag=True)
 @click.option('-p', '--port')
 @click.option('-h', '--host')
 def web(connection, debug, port, host):
     """Run the admin interface"""
-    from .web import get_app
-    app = get_app(connection=connection)
+    from .web import create_application
+    app = create_application(connection=connection, url='/')
     app.run(debug=debug, port=port, host=host)
 
 
