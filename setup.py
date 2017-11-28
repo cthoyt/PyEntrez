@@ -7,7 +7,7 @@ import re
 import setuptools
 
 PACKAGES = setuptools.find_packages(where='src')
-META_PATH = os.path.join('src', 'pyentrez', '__init__.py')
+META_PATH = os.path.join('src', 'bio2bel_entrez', '__init__.py')
 INSTALL_REQUIRES = [
     'click',
     'pandas',
@@ -17,13 +17,14 @@ INSTALL_REQUIRES = [
     'flask-admin',
     'tqdm',
     'bio2bel',
+    'pybel',
 ]
 ENTRY_POINTS = {
     'bio2bel': [
-        'entrez = pyentrez',
+        'entrez = bio2bel_entrez',
     ],
     'console_scripts': [
-        'pyentrez = pyentrez.cli:main',
+        'bio2bel_entrez = bio2bel_entrez.cli:main',
     ]
 }
 

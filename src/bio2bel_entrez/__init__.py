@@ -4,7 +4,7 @@ from . import cli
 
 __version__ = '0.0.1-dev'
 
-__title__ = 'pyentrez'
+__title__ = 'bio2bel_entrez'
 __description__ = "A package for parsing and storing Entrez Gene"
 __url__ = 'https://github.com/cthoyt/pyentrez'
 
