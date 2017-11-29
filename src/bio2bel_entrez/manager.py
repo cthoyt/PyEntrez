@@ -65,7 +65,7 @@ class Manager(object):
         :param Optional[int] interval: The number of records to commit at a time
         :param bool cache: If true, the data is downloaded to the file system, else it is loaded from the internet
         :param bool force_download: If true, overwrites a previously cached file
-        :param Optional[set[int]] tax_id_filter: Species to keep
+        :param Optional[set[str]] tax_id_filter: Species to keep
         """
         log.info('downloading data')
         df = get_entrez_df(url=url, cache=cache, force_download=force_download)
@@ -78,20 +78,20 @@ class Manager(object):
         log.info('preparing models')
         species_cache = {}
 
-        for idx, tax_id, gene_id, name, xrefs, descr, type_of_gene in tqdm(df.itertuples(), total=len(df.index)):
-            tax_id = int(tax_id)
-            gene_id = int(gene_id)
+        for idx, taxonomy_id, entrez_id, name, xrefs, descr, type_of_gene in tqdm(df.itertuples(), desc='Gene Info', total=len(df.index)):
+            taxonomy_id = str(int(taxonomy_id))
+            entrez_id = str(int(entrez_id))
 
-            species = species_cache.get(tax_id)
+            species = species_cache.get(taxonomy_id)
 
             if species is None:
-                species = Species(taxonomy_id=tax_id)
-                species_cache[tax_id] = species
+                species = Species(taxonomy_id=taxonomy_id)
+                species_cache[taxonomy_id] = species
                 self.session.add(species)
 
             gene = Gene(
                 species=species,
-                entrez_id=gene_id,
+                entrez_id=entrez_id,
                 name=name,
                 description=descr,
                 type_of_gene=type_of_gene,
@@ -116,7 +116,7 @@ class Manager(object):
         :param Optional[str] url: Homologene data url
         :param bool cache: If true, the data is downloaded to the file system, else it is loaded from the internet
         :param bool force_download: If true, overwrites a previously cached file
-        :param Optional[set[int]] tax_id_filter: Species to keep
+        :param Optional[set[str]] tax_id_filter: Species to keep
         """
         log.info('downloading data')
         df = get_homologene_df(url=url, cache=cache, force_download=force_download)
@@ -134,7 +134,7 @@ class Manager(object):
         species_cache = {}
 
         log.info('preparing models')
-        for _, (homologene_id, taxonomy_id, entrez_id, name, _, _) in tqdm(df.iterrows(), total=len(df.index)):
+        for _, (homologene_id, taxonomy_id, entrez_id, name, _, _) in tqdm(df.iterrows(), desc='HomoloGene', total=len(df.index)):
             species = species_cache.get(taxonomy_id)
             if species is None:
                 species = species_cache[taxonomy_id] = self.get_or_create_species(taxonomy_id=taxonomy_id)
@@ -160,7 +160,7 @@ class Manager(object):
 
         :param Optional[str] gene_info_url: A custom url to download
         :param Optional[int] interval: The number of records to commit at a time
-        :param Optional[set[int]] tax_id_filter: Species to keep
+        :param Optional[set[str]] tax_id_filter: Species to keep
         :param Optional[str] homologene_url: A custom url to download
         """
         self.populate_gene_info(url=gene_info_url, interval=interval, tax_id_filter=tax_id_filter)
@@ -210,5 +210,5 @@ if __name__ == '__main__':
     m.create_all()
     # turl =  '/Users/cthoyt/.pybel/bio2bel/entrez/Saccharomyces_cerevisiae.gene_info.gz'
     turl = None
-    tidf = {9606, 4932, 559292}
+    tidf = {'9606', '4932', '559292'}
     m.populate(gene_info_url=turl, tax_id_filter=tidf)

@@ -15,7 +15,7 @@ def add_admin(app, session, **kwargs):
     :param session:
     :param str url: The relative URL at which the admin app is plaed
     """
-    admin = Admin(app, template_mode='bootstrap3', **kwargs)
+    admin = Admin(app, name='Entrez', template_mode='bootstrap3', **kwargs)
     admin.add_view(ModelView(Gene, session))
     admin.add_view(ModelView(Xref, session))
     admin.add_view(ModelView(Species, session))

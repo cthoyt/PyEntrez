@@ -21,7 +21,7 @@ class Species(Base):
 
     id = Column(Integer, primary_key=True)
 
-    taxonomy_id = Column(Integer, unique=True, nullable=False, index=True, doc='NCBI Taxonomy Identifier')
+    taxonomy_id = Column(String, unique=True, nullable=False, index=True, doc='NCBI Taxonomy Identifier')
 
     def __repr__(self):
         return str(self.taxonomy_id)
@@ -36,7 +36,7 @@ class Gene(Base):
     species_id = Column(Integer, ForeignKey('{}.id'.format(SPECIES_TABLE_NAME)), index=True)
     species = relationship('Species', backref=backref('genes'))
 
-    entrez_id = Column(Integer, nullable=False, index=True, doc='NCBI Entrez Gene Identifier')
+    entrez_id = Column(String, nullable=False, index=True, doc='NCBI Entrez Gene Identifier')
     name = Column(String, doc='Entrez Gene Symbol')
     description = Column(String, doc='Gene Description')
     type_of_gene = Column(String, doc='Type of Gene')
