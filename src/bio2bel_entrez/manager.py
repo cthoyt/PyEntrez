@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 
 import logging
-
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from tqdm import tqdm
@@ -78,7 +77,8 @@ class Manager(object):
         log.info('preparing models')
         species_cache = {}
 
-        for idx, taxonomy_id, entrez_id, name, xrefs, descr, type_of_gene in tqdm(df.itertuples(), desc='Gene Info', total=len(df.index)):
+        for idx, taxonomy_id, entrez_id, name, xrefs, descr, type_of_gene in tqdm(df.itertuples(), desc='Gene Info',
+                                                                                  total=len(df.index)):
             taxonomy_id = str(int(taxonomy_id))
             entrez_id = str(int(entrez_id))
 
@@ -134,7 +134,8 @@ class Manager(object):
         species_cache = {}
 
         log.info('preparing models')
-        for _, (homologene_id, taxonomy_id, entrez_id, name, _, _) in tqdm(df.iterrows(), desc='HomoloGene', total=len(df.index)):
+        for _, (homologene_id, taxonomy_id, entrez_id, name, _, _) in tqdm(df.iterrows(), desc='HomoloGene',
+                                                                           total=len(df.index)):
             species = species_cache.get(taxonomy_id)
             if species is None:
                 species = species_cache[taxonomy_id] = self.get_or_create_species(taxonomy_id=taxonomy_id)
@@ -166,40 +167,66 @@ class Manager(object):
         self.populate_gene_info(url=gene_info_url, interval=interval, tax_id_filter=tax_id_filter)
         self.populate_homologene(url=homologene_url, tax_id_filter=tax_id_filter)
 
-    def get_gene_by_id(self, entrez_id):
+    def get_gene_by_entrez_id(self, entrez_id):
         """Looks up a gene by entrez identifier
 
         :param str entrez_id: Entrez gene identifier
         :rtype: Optional[Gene]
         """
-        self.session.query(Gene).filter(Gene.entrez_id == entrez_id).one_or_none()
+        return self.session.query(Gene).filter(Gene.entrez_id == entrez_id).one_or_none()
 
-    def enrich_homologs(self, graph):
-        """Adds homologenes to graph
+    def lookup_node(self, data):
+        """Looks up a gene from a PyBEL data dictionary
+
+        :param dict data: A PyBEL data dictionary
+        :rtype: Optional[Gene]
+        """
+        if data[FUNCTION] != GENE:
+            return
+
+        namespace = data.get(NAMESPACE)
+
+        if namespace is None or namespace not in {'EGID', 'EG', 'ENTREZ'}:
+            return
+
+        if IDENTIFIER in data:
+            return self.get_gene_by_entrez_id(entrez_id=data[IDENTIFIER])
+        elif NAME in data:
+            return self.get_gene_by_entrez_id(entrez_id=data[NAME])
+        else:
+            raise IndexError
+
+    def _iter_gene_data(self, graph):
+        for gene_node, data in graph.nodes(data=True):
+            gene = self.lookup_node(data)
+
+            if gene is None:
+                continue
+
+            yield gene_node, data, gene
+
+    def enrich_genes_with_homologenes(self, graph):
+        """Adds HomoloGene parents to graph
 
         :type graph: pybel.BELGraph
         """
-        for gene_node, data in graph.nodes_iter(data=True):
-            if data[FUNCTION] != GENE:
-                continue
+        for gene_node, data, gene in self._iter_gene_data(graph):
+            homologene_node = graph.add_node_from_data(gene.homologene.to_pybel())
+            graph.add_is_a(gene_node, homologene_node)
 
-            namespace = data[NAMESPACE]
+    def enrich_orthologies(self, graph):
+        """Adds ortholog relationships to graph
 
-            if namespace in {'EGID', 'EG', 'ENTREZ'}:
-                if IDENTIFIER in data:
-                    gene = self.get_gene_by_id(entrez_id=data[IDENTIFIER])
-                elif NAME in data:
-                    gene = self.get_gene_by_id(entrez_id=data[NAME])
-                else:
-                    raise IndexError
+        :type graph: pybel.BELGraph
+        """
+        for gene_node, data, gene in self._iter_gene_data(graph):
+            for ortholog in gene.homologene.genes:
+                ortholog_node = ortholog.to_pybel()
 
-                homologene_node = graph.add_node_from_data(gene.homologene.to_pybel())
+                if ortholog_node.to_tuple() == gene_node:
+                    continue
 
-                graph.add_unqualified_edge(
-                    gene_node,
-                    homologene_node,
-                    IS_A
-                )
+                graph.add_orthology(gene_node, ortholog_node)
 
 
 if __name__ == '__main__':
