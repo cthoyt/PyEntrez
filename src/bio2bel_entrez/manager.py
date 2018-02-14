@@ -228,6 +228,37 @@ class Manager(object):
 
                 graph.add_orthology(gene_node, ortholog_node)
 
+    def count_genes(self):
+        """Counts the genes in the database
+
+        :rtype: int
+        """
+        return self.session.query(Gene).count()
+
+    def count_homologenes(self):
+        """Counts the HomoloGenes in the database
+
+        :rtype: int
+        """
+        return self.session.query(Homologene).count()
+
+    def count_species(self):
+        """Counts the species in the database
+
+        :rtype: int
+        """
+        return self.session.query(Species).count()
+
+    def list_genes(self, limit=None, offset=None):
+        query = self.session.query(Gene)
+        if limit:
+            query = query.limit(limit)
+
+        if offset:
+            query = query.offset(offset)
+
+        return query.all()
+
 
 if __name__ == '__main__':
     logging.basicConfig(level=20, format="%(asctime)s - %(levelname)s - %(message)s", datefmt="%H:%M:%S")

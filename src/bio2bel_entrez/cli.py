@@ -1,8 +1,7 @@
 # -*- coding: utf-8 -*-
 
-import logging
-
 import click
+import logging
 
 from .constants import DEFAULT_CACHE_CONNECTION
 from .manager import Manager
@@ -31,6 +30,53 @@ def drop(connection):
     if click.confirm('Drop everything?'):
         m = Manager(connection=connection)
         m.drop_all()
+
+
+@main.command()
+@click.option('-c', '--connection', help='Defaults to {}'.format(DEFAULT_CACHE_CONNECTION))
+def summarize(connection):
+    """Summarize the contents of the database"""
+    m = Manager(connection=connection)
+
+    click.echo('Genes: {}'.format(m.count_genes()))
+    click.echo('Species: {}'.format(m.count_species()))
+    click.echo('HomoloGenes: {}'.format(m.count_homologenes()))
+
+
+@main.group()
+def gene():
+    pass
+
+
+@gene.command()
+@click.argument('entrez_id')
+@click.option('-c', '--connection', help='Defaults to {}'.format(DEFAULT_CACHE_CONNECTION))
+def get(connection, entrez_id):
+    """Looks up a gene by its identifier and prints a summary"""
+    m = Manager(connection=connection)
+    gene = m.get_gene_by_entrez_id(entrez_id)
+
+    if gene is None:
+        click.echo('Unable to find gene: {}'.format(entrez_id))
+
+    else:
+        click.echo('Name: {}'.format(gene.name))
+        click.echo('Description: {}'.format(gene.description))
+        click.echo('Species: {}'.format(gene.species))
+
+        if gene.homologene:
+            click.echo('HomoloGene: {}'.format(gene.homologene))
+
+
+@gene.command()
+@click.option('-c', '--connection', help='Defaults to {}'.format(DEFAULT_CACHE_CONNECTION))
+@click.option('-l', '--limit', type=int, default=10)
+@click.option('-o', '--offset', type=int)
+def ls(connection, limit, offset):
+    m = Manager(connection=connection)
+
+    for gene in m.list_genes(limit=limit, offset=offset):
+        click.echo('\t'.join([gene.entrez_id, gene.name, str(gene.species)]))
 
 
 @main.command()
