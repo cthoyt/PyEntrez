@@ -1,15 +1,15 @@
 # -*- coding: utf-8 -*-
 
-import click
 import logging
+
+import click
 
 from .constants import DEFAULT_CACHE_CONNECTION
 from .manager import Manager
 
 
-@click.group()
+@click.group(help='Convert Entrez to BEL. Default connection at {}'.format(DEFAULT_CACHE_CONNECTION))
 def main():
-    """Entrez to BEL"""
     logging.basicConfig(level=logging.INFO)
 
 
@@ -17,10 +17,11 @@ def main():
 @click.option('-c', '--connection', help='Defaults to {}'.format(DEFAULT_CACHE_CONNECTION))
 @click.option('-t', '--tax-id', default=['9606'], multiple=True,
               help='Keep this taxonomy identifier. Can specify multiple. Defaults to just human')
-def populate(connection, tax_id):
+@click.option('-a', '--all-tax-id', is_flag=True, help='Use all taxonomy identifiers')
+def populate(connection, tax_id, all_tax_id):
     """Populates the database"""
     m = Manager(connection=connection)
-    m.populate(tax_id_filter=tax_id)
+    m.populate(tax_id_filter=(None if all_tax_id else tax_id))
 
 
 @main.command()
@@ -54,18 +55,18 @@ def gene():
 def get(connection, entrez_id):
     """Looks up a gene by its identifier and prints a summary"""
     m = Manager(connection=connection)
-    gene = m.get_gene_by_entrez_id(entrez_id)
+    gene_model = m.get_gene_by_entrez_id(entrez_id)
 
-    if gene is None:
+    if gene_model is None:
         click.echo('Unable to find gene: {}'.format(entrez_id))
 
     else:
-        click.echo('Name: {}'.format(gene.name))
-        click.echo('Description: {}'.format(gene.description))
-        click.echo('Species: {}'.format(gene.species))
+        click.echo('Name: {}'.format(gene_model.name))
+        click.echo('Description: {}'.format(gene_model.description))
+        click.echo('Species: {}'.format(gene_model.species))
 
-        if gene.homologene:
-            click.echo('HomoloGene: {}'.format(gene.homologene))
+        if gene_model.homologene:
+            click.echo('HomoloGene: {}'.format(gene_model.homologene))
 
 
 @gene.command()
