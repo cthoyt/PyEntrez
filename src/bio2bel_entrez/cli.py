@@ -10,29 +10,29 @@ from .manager import Manager
 
 @click.group(help='Convert Entrez to BEL. Default connection at {}'.format(DEFAULT_CACHE_CONNECTION))
 def main():
-    logging.basicConfig(level=logging.INFO)
+    logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
+
+
+default_tax_ids = [
+    '9606',  # Human
+    '10090',  # Mouse
+    '10116',  # Rat
+    '7227',  # Drosophila
+    '4932',  # Yeast
+]
 
 
 @main.command()
 @click.option('-c', '--connection', help='Defaults to {}'.format(DEFAULT_CACHE_CONNECTION))
-@click.option('-t', '--tax-id', default=['9606'], multiple=True,
-              help='Keep this taxonomy identifier. Can specify multiple. Defaults to just human')
+@click.option('-t', '--tax-id', default=default_tax_ids, multiple=True,
+              help='Keep this taxonomy identifier. Can specify multiple.')
 @click.option('-a', '--all-tax-id', is_flag=True, help='Use all taxonomy identifiers')
-@click.option('-p', '--preset-tax-id', is_flag=True, help='Use all taxonomy identifiers')
-def populate(connection, tax_id, all_tax_id, preset_tax_id):
+def populate(connection, tax_id, all_tax_id):
     """Populates the database"""
     m = Manager(connection=connection)
 
     if all_tax_id:
         tax_id_filter = None
-    elif preset_tax_id:
-        tax_id_filter = [
-            '9606',  # Human
-            '10090',  # Mouse
-            '10116',  # Rat
-            '7227',  # Drosophila
-            '4932',  # Yeast
-        ]
     else:
         tax_id_filter = tax_id
 
@@ -41,9 +41,10 @@ def populate(connection, tax_id, all_tax_id, preset_tax_id):
 
 @main.command()
 @click.option('-c', '--connection', help='Defaults to {}'.format(DEFAULT_CACHE_CONNECTION))
-def drop(connection):
+@click.option('-y', '--yes', is_flag=True)
+def drop(connection, yes):
     """Drops database"""
-    if click.confirm('Drop everything?'):
+    if yes or click.confirm('Drop everything?'):
         m = Manager(connection=connection)
         m.drop_all()
 

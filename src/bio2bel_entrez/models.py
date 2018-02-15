@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-from sqlalchemy import Column, ForeignKey, Integer, String, Text
+from sqlalchemy import Column, ForeignKey, Index, Integer, String, Text
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import backref, relationship
 
@@ -67,7 +67,12 @@ class Xref(Base):
     gene = relationship('Gene', backref=backref('xrefs'))
 
     database = Column(String(64), doc='Database name', index=True)
-    value = Column(Text, doc='Database entry name')
+    value = Column(String(255), doc='Database entry name')
+
+    __table_args__ = (
+        Index(gene_id, database, value),
+        # UniqueConstraint(gene_id, database, value),
+    )
 
 
 class Homologene(Base):
