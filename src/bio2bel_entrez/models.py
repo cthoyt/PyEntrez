@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-from sqlalchemy import Column, ForeignKey, Integer, String
+from sqlalchemy import Column, ForeignKey, Integer, String, Text
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import backref, relationship
 
@@ -21,7 +21,7 @@ class Species(Base):
 
     id = Column(Integer, primary_key=True)
 
-    taxonomy_id = Column(String, unique=True, nullable=False, index=True, doc='NCBI Taxonomy Identifier')
+    taxonomy_id = Column(String(32), unique=True, nullable=False, index=True, doc='NCBI Taxonomy Identifier')
 
     def __repr__(self):
         return str(self.taxonomy_id)
@@ -36,10 +36,10 @@ class Gene(Base):
     species_id = Column(Integer, ForeignKey('{}.id'.format(SPECIES_TABLE_NAME)), index=True)
     species = relationship('Species', backref=backref('genes'))
 
-    entrez_id = Column(String, nullable=False, index=True, doc='NCBI Entrez Gene Identifier')
-    name = Column(String, doc='Entrez Gene Symbol')
-    description = Column(String, doc='Gene Description')
-    type_of_gene = Column(String, doc='Type of Gene')
+    entrez_id = Column(String(32), nullable=False, index=True, doc='NCBI Entrez Gene Identifier')
+    name = Column(String(255), doc='Entrez Gene Symbol')
+    description = Column(Text, doc='Gene Description')
+    type_of_gene = Column(String(32), doc='Type of Gene')
 
     # modification_date = Column(Date)
 
@@ -66,8 +66,8 @@ class Xref(Base):
     gene_id = Column(Integer, ForeignKey('{}.id'.format(GENE_TABLE_NAME)), index=True)
     gene = relationship('Gene', backref=backref('xrefs'))
 
-    database = Column(String, doc='Database name', index=True)
-    value = Column(String, doc='Database entry name')
+    database = Column(String(64), doc='Database name', index=True)
+    value = Column(Text, doc='Database entry name')
 
 
 class Homologene(Base):
