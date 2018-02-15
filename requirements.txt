@@ -1,9 +1,9 @@
 click
 pandas
-sqlalchemy
+sqlalchemy==1.1.15
 six
-flask
-flask-admin
 tqdm
 bio2bel
 pybel
+flask[web]
+flask_admin[web]

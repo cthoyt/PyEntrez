@@ -11,7 +11,7 @@ META_PATH = os.path.join('src', 'bio2bel_entrez', '__init__.py')
 INSTALL_REQUIRES = [
     'click',
     'pandas',
-    'sqlalchemy',
+    'sqlalchemy==1.1.15',
     'six',
     'flask',
     'flask-admin',
@@ -19,6 +19,9 @@ INSTALL_REQUIRES = [
     'bio2bel',
     'pybel',
 ]
+EXTRAS_REQUIRE = {
+    'web': ['flask', 'flask_admin'],
+}
 ENTRY_POINTS = {
     'bio2bel': [
         'entrez = bio2bel_entrez',
@@ -73,5 +76,6 @@ if __name__ == '__main__':
         packages=PACKAGES,
         package_dir={'': 'src'},
         install_requires=INSTALL_REQUIRES,
+        extras_require=EXTRAS_REQUIRE,
         entry_points=ENTRY_POINTS,
     )
