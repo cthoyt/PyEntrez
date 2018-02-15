@@ -18,10 +18,25 @@ def main():
 @click.option('-t', '--tax-id', default=['9606'], multiple=True,
               help='Keep this taxonomy identifier. Can specify multiple. Defaults to just human')
 @click.option('-a', '--all-tax-id', is_flag=True, help='Use all taxonomy identifiers')
-def populate(connection, tax_id, all_tax_id):
+@click.option('-p', '--preset-tax-id', is_flag=True, help='Use all taxonomy identifiers')
+def populate(connection, tax_id, all_tax_id, preset_tax_id):
     """Populates the database"""
     m = Manager(connection=connection)
-    m.populate(tax_id_filter=(None if all_tax_id else tax_id))
+
+    if all_tax_id:
+        tax_id_filter = None
+    elif preset_tax_id:
+        tax_id_filter = [
+            '9606',  # Human
+            '10090',  # Mouse
+            '10116',  # Rat
+            '7227',  # Drosophila
+            '4932',  # Yeast
+        ]
+    else:
+        tax_id_filter = tax_id
+
+    m.populate(tax_id_filter=tax_id_filter)
 
 
 @main.command()
