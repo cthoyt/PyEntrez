@@ -56,6 +56,18 @@ class Gene(Base):
         """
         return gene(namespace='ENTREZ', name=str(self.name), identifier=str(self.entrez_id))
 
+    def to_json(self):
+        """Returns this as a JSON dictionary
+
+        :rtype: dict
+        """
+        return dict(
+            entrez_id=str(self.entrez_id),
+            name=str(self.name),
+            species=str(self.species),
+            description=str(self.description),
+            type=str(self.type_of_gene),
+        )
 
 class Xref(Base):
     """Represents a database cross reference"""
