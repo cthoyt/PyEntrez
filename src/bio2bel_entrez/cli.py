@@ -1,16 +1,19 @@
 # -*- coding: utf-8 -*-
 
-import logging
-
 import click
+import logging
 
 from .constants import DEFAULT_CACHE_CONNECTION
 from .manager import Manager
 
 
-@click.group(help='Convert Entrez to BEL. Default connection at {}'.format(DEFAULT_CACHE_CONNECTION))
-def main():
+@click.group()
+@click.option('-c', '--connection', help='Defaults to {}'.format(DEFAULT_CACHE_CONNECTION))
+@click.pass_context
+def main(ctx, connection):
+    """Convert Entrez to BEL"""
     logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
+    ctx.obj = Manager(connection=connection)
 
 
 default_tax_ids = [
@@ -23,55 +26,50 @@ default_tax_ids = [
 
 
 @main.command()
-@click.option('-c', '--connection', help='Defaults to {}'.format(DEFAULT_CACHE_CONNECTION))
 @click.option('-t', '--tax-id', default=default_tax_ids, multiple=True,
-              help='Keep this taxonomy identifier. Can specify multiple.')
+              help='Keep this taxonomy identifier. Can specify multiple. Defaults to 9606 (human), 10090 (mouse), 10116'
+                   ' (rat), 7227 (fly), and 4932 (yeast).')
 @click.option('-a', '--all-tax-id', is_flag=True, help='Use all taxonomy identifiers')
-def populate(connection, tax_id, all_tax_id):
+@click.pass_obj
+def populate(manager, tax_id, all_tax_id):
     """Populates the database"""
-    m = Manager(connection=connection)
-
     if all_tax_id:
         tax_id_filter = None
     else:
         tax_id_filter = tax_id
 
-    m.populate(tax_id_filter=tax_id_filter)
+    manager.populate(tax_id_filter=tax_id_filter)
 
 
 @main.command()
-@click.option('-c', '--connection', help='Defaults to {}'.format(DEFAULT_CACHE_CONNECTION))
 @click.option('-y', '--yes', is_flag=True)
-def drop(connection, yes):
+@click.pass_obj
+def drop(manager, yes):
     """Drops database"""
     if yes or click.confirm('Drop everything?'):
-        m = Manager(connection=connection)
-        m.drop_all()
+        manager.drop_all()
 
 
 @main.command()
-@click.option('-c', '--connection', help='Defaults to {}'.format(DEFAULT_CACHE_CONNECTION))
-def summarize(connection):
+@click.pass_obj
+def summarize(manager):
     """Summarize the contents of the database"""
-    m = Manager(connection=connection)
-
-    click.echo('Genes: {}'.format(m.count_genes()))
-    click.echo('Species: {}'.format(m.count_species()))
-    click.echo('HomoloGenes: {}'.format(m.count_homologenes()))
+    click.echo('Genes: {}'.format(manager.count_genes()))
+    click.echo('Species: {}'.format(manager.count_species()))
+    click.echo('HomoloGenes: {}'.format(manager.count_homologenes()))
 
 
 @main.group()
 def gene():
-    pass
+    """Gene tools"""
 
 
 @gene.command()
 @click.argument('entrez_id')
-@click.option('-c', '--connection', help='Defaults to {}'.format(DEFAULT_CACHE_CONNECTION))
-def get(connection, entrez_id):
-    """Looks up a gene by its identifier and prints a summary"""
-    m = Manager(connection=connection)
-    gene_model = m.get_gene_by_entrez_id(entrez_id)
+@click.pass_obj
+def get(manager, entrez_id):
+    """Looks up a gene"""
+    gene_model = manager.get_gene_by_entrez_id(entrez_id)
 
     if gene_model is None:
         click.echo('Unable to find gene: {}'.format(entrez_id))
@@ -86,25 +84,24 @@ def get(connection, entrez_id):
 
 
 @gene.command()
-@click.option('-c', '--connection', help='Defaults to {}'.format(DEFAULT_CACHE_CONNECTION))
-@click.option('-l', '--limit', type=int, default=10)
+@click.option('-l', '--limit', type=int, default=10, help='Limit, defaults to 10.')
 @click.option('-o', '--offset', type=int)
-def ls(connection, limit, offset):
-    m = Manager(connection=connection)
-
-    for gene in m.list_genes(limit=limit, offset=offset):
-        click.echo('\t'.join([gene.entrez_id, gene.name, str(gene.species)]))
+@click.pass_obj
+def ls(manager, limit, offset):
+    """List TSV of genes' identifiers, names, then species taxonomy identifiers"""
+    for g in manager.list_genes(limit=limit, offset=offset):
+        click.echo('\t'.join([g.entrez_id, g.name, str(g.species)]))
 
 
 @main.command()
-@click.option('-c', '--connection', help='Defaults to {}'.format(DEFAULT_CACHE_CONNECTION))
 @click.option('-v', '--debug', is_flag=True)
-@click.option('-p', '--port')
 @click.option('-h', '--host')
-def web(connection, debug, port, host):
+@click.option('-p', '--port', type=int)
+@click.pass_obj
+def web(manager, debug, port, host):
     """Run the admin interface"""
-    from .web import create_application
-    app = create_application(connection=connection, url='/')
+    from .web import get_app
+    app = get_app(connection=manager, url='/')
     app.run(debug=debug, port=port, host=host)
 
 

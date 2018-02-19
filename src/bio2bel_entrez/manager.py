@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 
 import logging
-
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from tqdm import tqdm
@@ -46,6 +45,22 @@ class Manager(object):
         """Create tables"""
         log.info('dropping tables')
         Base.metadata.drop_all(self.engine, checkfirst=check_first)
+
+    @staticmethod
+    def ensure(connection=None, *args, **kwargs):
+        """A convenience method for turning a string into a connection, or passing a :class:`Manager` through.
+
+        :param connection: An RFC-1738 database connection string, a pre-built :class:`Manager`, or ``None``
+                            for default connection
+        :type connection: Optional[str or Manager]
+        :param list args: Positional arguments to pass to the constructor of :class:`Manager`
+        :param dict kwargs: Keyword arguments to pass to the constructor of :class:`Manager`
+        :rtype: Manager
+        """
+        if connection is None or isinstance(connection, str):
+            return Manager(connection=connection, *args, **kwargs)
+
+        return connection
 
     def get_or_create_species(self, taxonomy_id, **kwargs):
         species = self.species_cache.get(taxonomy_id)
