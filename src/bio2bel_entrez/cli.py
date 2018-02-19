@@ -1,7 +1,8 @@
 # -*- coding: utf-8 -*-
 
-import click
 import logging
+
+import click
 
 from .constants import DEFAULT_CACHE_CONNECTION
 from .manager import Manager
@@ -91,6 +92,19 @@ def ls(manager, limit, offset):
     """List TSV of genes' identifiers, names, then species taxonomy identifiers"""
     for g in manager.list_genes(limit=limit, offset=offset):
         click.echo('\t'.join([g.entrez_id, g.name, str(g.species)]))
+
+
+@main.group()
+def species():
+    """Species utils"""
+
+
+@species.command()
+@click.pass_obj
+def ls(manager):
+    """List species"""
+    for s in manager.list_species():
+        click.echo(s)
 
 
 @main.command()

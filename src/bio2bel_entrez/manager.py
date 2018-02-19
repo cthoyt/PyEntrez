@@ -300,6 +300,9 @@ class Manager(object):
 
         return query.all()
 
+    def list_species(self):
+        return self.session.query(Species).all()
+
 
 if __name__ == '__main__':
     logging.basicConfig(level=20, format="%(asctime)s - %(levelname)s - %(message)s", datefmt="%H:%M:%S")
