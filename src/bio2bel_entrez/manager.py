@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
 import logging
+
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from tqdm import tqdm
@@ -281,6 +282,13 @@ class Manager(object):
         :rtype: int
         """
         return self.session.query(Species).count()
+
+    def summarize(self):
+        """Returns a summary dictionary over the content of the database
+
+        :rtype: dict[str,int]
+        """
+        return dict(genes=self.count_genes(), species=self.count_species(), homologenes=self.count_homologenes())
 
     def list_genes(self, limit=None, offset=None):
         query = self.session.query(Gene)
