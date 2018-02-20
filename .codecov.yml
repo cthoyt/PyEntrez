@@ -1,0 +1,12 @@
+codecov:
+    branch: master
+
+coverage:
+  precision: 2
+  round: down
+  range: "60...100"
+
+  ignore:
+    - "tests/*"
+    - "src/bio2bel_entrez/cli.py"
+    - "src/bio2bel_entrez/__main__.py"

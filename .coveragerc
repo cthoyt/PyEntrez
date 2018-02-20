@@ -1,0 +1,18 @@
+[run]
+branch = True
+source = bio2bel_entrez
+omit =
+    src/bio2bel_entrez/__main__.py
+    src/bio2bel_entrez/cli.py
+    tests/*
+
+[paths]
+source =
+    src/bio2bel_entrez
+    .tox/*/lib/python*/site-packages/bio2bel_entrez
+
+[report]
+show_missing = True
+exclude_lines =
+    def __str__
+    def __repr__
