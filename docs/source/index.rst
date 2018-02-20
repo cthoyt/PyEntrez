@@ -8,7 +8,6 @@ Bio2BEL Entrez
 
    manager
    models
-   enrichment
    constants
 
 Indices and tables
