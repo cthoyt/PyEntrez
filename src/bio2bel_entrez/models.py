@@ -1,10 +1,9 @@
 # -*- coding: utf-8 -*-
 
+from pybel.dsl import gene
 from sqlalchemy import Column, ForeignKey, Index, Integer, String, Text
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import backref, relationship
-
-from pybel.dsl import gene
 
 TABLE_PREFIX = 'entrez'
 GENE_TABLE_NAME = '{}_gene'.format(TABLE_PREFIX)
@@ -68,6 +67,7 @@ class Gene(Base):
             description=str(self.description),
             type=str(self.type_of_gene),
         )
+
 
 class Xref(Base):
     """Represents a database cross reference"""

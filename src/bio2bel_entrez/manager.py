@@ -2,66 +2,37 @@
 
 import logging
 
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
+from pybel.constants import FUNCTION, GENE, IDENTIFIER, NAME, NAMESPACE
+from sqlalchemy import and_
 from tqdm import tqdm
 
-from pybel.constants import FUNCTION, GENE, IDENTIFIER, NAME, NAMESPACE
-from .constants import DEFAULT_CACHE_CONNECTION
+from bio2bel import AbstractManager
+from .constants import MODULE_NAME
 from .models import Base, Gene, Homologene, Species, Xref
 from .parser import get_entrez_df, get_homologene_df
 
 log = logging.getLogger(__name__)
 
 
-class Manager(object):
+class Manager(AbstractManager):
     """Manages the Entrez Gene database"""
 
-    def __init__(self, connection=None, echo=False, autoflush=False, expire_on_commit=True):
+    module_name = MODULE_NAME
+
+    def __init__(self, connection=None):
         """
-        :param Optional[str] connection: SQLAlchemy
-        :param bool echo: True or False for SQL output of SQLAlchemy engine
+        :param Optional[str] connection: SQLAlchemy connection string
         """
-        self.connection = connection or DEFAULT_CACHE_CONNECTION
-        log.info('using connection %s', self.connection)
-        self.engine = create_engine(self.connection, echo=echo)
-        self.session_maker = sessionmaker(
-            bind=self.engine,
-            autoflush=autoflush,
-            expire_on_commit=expire_on_commit
-        )
-        self.session = self.session_maker()
-        self.create_all()
+        super().__init__(connection)
 
         self.species_cache = {}
         self.gene_cache = {}
         self.homologene_cache = {}
         self.gene_homologene = {}
 
-    def create_all(self, check_first=True):
-        """Create tables"""
-        Base.metadata.create_all(self.engine, checkfirst=check_first)
-
-    def drop_all(self, check_first=True):
-        """Create tables"""
-        log.info('dropping tables')
-        Base.metadata.drop_all(self.engine, checkfirst=check_first)
-
-    @staticmethod
-    def ensure(connection=None, *args, **kwargs):
-        """A convenience method for turning a string into a connection, or passing a :class:`Manager` through.
-
-        :param connection: An RFC-1738 database connection string, a pre-built :class:`Manager`, or ``None``
-                            for default connection
-        :type connection: Optional[str or Manager]
-        :param list args: Positional arguments to pass to the constructor of :class:`Manager`
-        :param dict kwargs: Keyword arguments to pass to the constructor of :class:`Manager`
-        :rtype: Manager
-        """
-        if connection is None or isinstance(connection, str):
-            return Manager(connection=connection, *args, **kwargs)
-
-        return connection
+    @property
+    def base(self):
+        return Base
 
     def get_or_create_species(self, taxonomy_id, **kwargs):
         species = self.species_cache.get(taxonomy_id)
@@ -78,6 +49,16 @@ class Manager(object):
 
         return species
 
+    _species_consortium_mapping = {
+        10090: 'MGI',
+        10116: 'RGD',
+        4932: 'SGD',
+        7227: 'FLYBASE',
+        9606: 'HGNC'
+    }
+
+    _consortium_species_mapping = dict(map(reversed, _species_consortium_mapping.items()))
+
     def get_gene_by_entrez_id(self, entrez_id):
         """Looks up a gene by entrez identifier
 
@@ -85,6 +66,18 @@ class Manager(object):
         :rtype: Optional[Gene]
         """
         return self.session.query(Gene).filter(Gene.entrez_id == entrez_id).one_or_none()
+
+    def get_gene_by_rgd_name(self, name):
+        rgd_name_filter = and_(Species.taxonomy_id == '10116', Gene.name == name)
+        return self.session.query(Gene).join(Species).filter(rgd_name_filter).one_or_none()
+
+    def get_gene_by_mgi_name(self, name):
+        mgi_name_filter = and_(Species.taxonomy_id == '10090', Gene.name == name)
+        return self.session.query(Gene).join(Species).filter(mgi_name_filter).one_or_none()
+
+    def get_gene_by_hgnc_name(self, name):
+        hgnc_name_filter = and_(Species.taxonomy_id == '9606', Gene.name == name)
+        return self.session.query(Gene).join(Species).filter(hgnc_name_filter).one_or_none()
 
     def get_or_create_gene(self, entrez_id, **kwargs):
         gene = self.gene_cache.get(entrez_id)
@@ -220,15 +213,27 @@ class Manager(object):
 
         namespace = data.get(NAMESPACE)
 
-        if namespace is None or namespace not in {'EGID', 'EG', 'ENTREZ'}:
+        if namespace is None:
             return
 
-        if IDENTIFIER in data:
-            return self.get_gene_by_entrez_id(entrez_id=data[IDENTIFIER])
-        elif NAME in data:
-            return self.get_gene_by_entrez_id(entrez_id=data[NAME])
-        else:
-            raise IndexError
+        name = data.get(NAME)
+        identifier = data.get(IDENTIFIER)
+
+        if namespace in {'EGID', 'EG', 'ENTREZ'}:
+            if identifier:
+                return self.get_gene_by_entrez_id(identifier)
+            elif name:
+                return self.get_gene_by_entrez_id(name)
+            else:
+                raise IndexError
+
+        if namespace == 'MGI':
+            if name:
+                return self.get_gene_by_mgi_name(name)
+
+        if namespace == 'RGD':
+            if name:
+                return self.get_gene_by_rgd_name(name)
 
     def _iter_gene_data(self, graph):
         for gene_node, data in graph.nodes(data=True):
