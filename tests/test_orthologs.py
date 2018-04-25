@@ -10,15 +10,16 @@ from tests.constants import PopulatedDatabaseMixin
 rgd_name = 'Mapk1'
 rgd_node = gene(namespace='MGI', name=rgd_name)
 rat_entrez_id = '116590'
-rat_entrez_node = gene(namespace='ENTREZ', identifier='116590')
+rat_entrez_node = gene(namespace='ENTREZ', name=rgd_name, identifier='116590')
 
 hgnc_name = 'MAPK1'
 hgnc_node = gene(namespace='HGNC', name=hgnc_name)
 human_entrez_id = '5594'
-human_entrez_node = gene(namespace='ENTREZ', identifier='5594')
+human_entrez_node = gene(namespace='ENTREZ', name=hgnc_name, identifier='5594')
 
 
 class TestOrthologs(PopulatedDatabaseMixin):
+    """Tests loading of orthologs."""
 
     def test_get_rgd(self):
         node = self.manager.get_gene_by_rgd_name(rgd_name)
@@ -38,6 +39,7 @@ class TestOrthologs(PopulatedDatabaseMixin):
         self.assertEqual(1, graph.number_of_edges())
 
         self.assertIn(rat_entrez_node.as_tuple(), graph[rgd_node.as_tuple()])
+
 
 if __name__ == '__main__':
     unittest.main()

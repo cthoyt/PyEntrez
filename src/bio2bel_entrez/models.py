@@ -5,11 +5,12 @@ from sqlalchemy import Column, ForeignKey, Index, Integer, String, Text
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import backref, relationship
 
-TABLE_PREFIX = 'entrez'
-GENE_TABLE_NAME = '{}_gene'.format(TABLE_PREFIX)
-GROUP_TABLE_NAME = '{}_homologene'.format(TABLE_PREFIX)
-SPECIES_TABLE_NAME = '{}_species'.format(TABLE_PREFIX)
-XREF_TABLE_NAME = '{}_xref'.format(TABLE_PREFIX)
+from .constants import MODULE_NAME
+
+GENE_TABLE_NAME = '{}_gene'.format(MODULE_NAME)
+GROUP_TABLE_NAME = '{}_homologene'.format(MODULE_NAME)
+SPECIES_TABLE_NAME = '{}_species'.format(MODULE_NAME)
+XREF_TABLE_NAME = '{}_xref'.format(MODULE_NAME)
 
 Base = declarative_base()
 
@@ -27,7 +28,8 @@ class Species(Base):
 
 
 class Gene(Base):
-    """Represents a Gene"""
+    """Represents a Gene."""
+
     __tablename__ = GENE_TABLE_NAME
 
     id = Column(Integer, primary_key=True)
@@ -48,15 +50,19 @@ class Gene(Base):
     def __repr__(self):
         return self.entrez_id
 
-    def to_pybel(self):
-        """Make PyBEL node data dictionary
+    def to_bel(self):
+        """Make PyBEL node data dictionary.
 
         :rtype: dict
         """
-        return gene(namespace='ENTREZ', name=str(self.name), identifier=str(self.entrez_id))
+        return gene(
+            namespace='ENTREZ',
+            name=str(self.name),
+            identifier=str(self.entrez_id)
+        )
 
     def to_json(self):
-        """Returns this as a JSON dictionary
+        """Returns this as a JSON dictionary.
 
         :rtype: dict
         """
@@ -70,7 +76,8 @@ class Gene(Base):
 
 
 class Xref(Base):
-    """Represents a database cross reference"""
+    """Represents a database cross reference."""
+
     __tablename__ = XREF_TABLE_NAME
 
     id = Column(Integer, primary_key=True)
@@ -88,7 +95,8 @@ class Xref(Base):
 
 
 class Homologene(Base):
-    """Represents a HomoloGene Group"""
+    """Represents a HomoloGene Group."""
+
     __tablename__ = GROUP_TABLE_NAME
 
     id = Column(Integer, primary_key=True)
@@ -98,9 +106,13 @@ class Homologene(Base):
     def __str__(self):
         return self.homologene_id
 
-    def to_pybel(self):
+    def to_bel(self):
         """Make PyBEL node data dictionary
 
         :rtype: dict
         """
-        return gene(namespace='HOMOLOGENE', identifier=str(self.homologene_id))
+        return gene(
+            namespace='HOMOLOGENE',
+            name=str(self.homologene_id),
+            identifier=str(self.homologene_id)
+        )

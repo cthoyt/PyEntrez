@@ -19,11 +19,8 @@ class Manager(AbstractManager):
 
     module_name = MODULE_NAME
 
-    def __init__(self, connection=None):
-        """
-        :param Optional[str] connection: SQLAlchemy connection string
-        """
-        super().__init__(connection)
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
 
         self.species_cache = {}
         self.gene_cache = {}
@@ -31,8 +28,15 @@ class Manager(AbstractManager):
         self.gene_homologene = {}
 
     @property
-    def base(self):
+    def _base(self):
         return Base
+
+    def is_populated(self):
+        """Check if the database is already populated.
+
+        :rtype: bool
+        """
+        return 0 < self.count_genes()
 
     def get_or_create_species(self, taxonomy_id, **kwargs):
         species = self.species_cache.get(taxonomy_id)
@@ -250,7 +254,7 @@ class Manager(AbstractManager):
         :type graph: pybel.BELGraph
         """
         for gene_node, data, gene in self._iter_gene_data(graph):
-            homologene_node = graph.add_node_from_data(gene.homologene.to_pybel())
+            homologene_node = graph.add_node_from_data(gene.homologene.to_bel())
             graph.add_is_a(gene_node, homologene_node)
 
     def enrich_orthologies(self, graph):
@@ -260,7 +264,7 @@ class Manager(AbstractManager):
         """
         for gene_node, data, gene in self._iter_gene_data(graph):
             for ortholog in gene.homologene.genes:
-                ortholog_node = ortholog.to_pybel()
+                ortholog_node = ortholog.to_bel()
 
                 if ortholog_node.to_tuple() == gene_node:
                     continue

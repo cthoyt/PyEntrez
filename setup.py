@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
 
+"""Setup.py for Bio2BEL Entrez."""
+
 import codecs
 import os
 import re
@@ -9,15 +11,16 @@ import setuptools
 PACKAGES = setuptools.find_packages(where='src')
 META_PATH = os.path.join('src', 'bio2bel_entrez', '__init__.py')
 INSTALL_REQUIRES = [
+    'pybel>=0.11.1',
+    'bio2bel>=0.0.9',
     'click',
     'pandas',
-    'sqlalchemy==1.1.15',
+    'sqlalchemy',
     'six',
     'flask',
     'flask-admin',
     'tqdm',
-    'bio2bel',
-    'pybel',
+
 ]
 EXTRAS_REQUIRE = {
     'web': ['flask', 'flask_admin'],
