@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
 import logging
+import time
 
 from sqlalchemy import and_
 from tqdm import tqdm
@@ -142,8 +143,10 @@ class Manager(AbstractManager):
                 entrez_id = str(int(entrez_id))
                 self.gene_homologene[entrez_id] = homologene
 
+        t = time.time()
         log.info('committing HomoloGene models')
         self.session.commit()
+        log.info('committed HomoloGene models in %.2f seconds', time.time() - t)
 
     def populate_gene_info(self, url=None, cache=True, force_download=False, interval=None, tax_id_filter=None):
         """Populates the database (assumes it's already empty)
@@ -154,6 +157,7 @@ class Manager(AbstractManager):
         :param bool force_download: If true, overwrites a previously cached file
         :param Optional[set[str]] tax_id_filter: Species to keep
         """
+        t = time.time()
         df = get_entrez_df(url=url, cache=cache, force_download=force_download)
 
         if tax_id_filter is not None:
@@ -162,13 +166,13 @@ class Manager(AbstractManager):
             df = df[df['#tax_id'].isin(tax_id_filter)]
 
         log.info('preparing Entrez Gene models')
-        for taxonomy_id, sub_df in df.groupby('#tax_id'):
+        for taxonomy_id, sub_df in tqdm(df.groupby('#tax_id'), desc='Species'):
             taxonomy_id = str(int(taxonomy_id))
             species = self.get_or_create_species(taxonomy_id=taxonomy_id)
 
-            for idx, _, entrez_id, name, xrefs, description, type_of_gene in tqdm(sub_df.itertuples(),
-                                                                                  desc='Tax ID {}'.format(taxonomy_id),
-                                                                                  total=len(sub_df.index)):
+            species_it = tqdm(sub_df.itertuples(), desc='Tax ID {}'.format(taxonomy_id), total=len(sub_df.index),
+                              leave=False)
+            for idx, _, entrez_id, name, xrefs, description, type_of_gene in species_it:
                 entrez_id = str(int(entrez_id))
 
                 if isinstance(name, float):

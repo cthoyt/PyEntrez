@@ -6,9 +6,10 @@ import click
 
 from .constants import default_tax_ids
 
-__all__ =[
+__all__ = [
     'add_populate_to_cli',
 ]
+
 
 def add_populate_to_cli(main):
     @main.command()
