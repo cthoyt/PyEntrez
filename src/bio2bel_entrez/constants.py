@@ -2,12 +2,10 @@
 
 import os
 
-from bio2bel.utils import get_connection, get_data_dir
+from bio2bel import get_data_dir
 
 MODULE_NAME = 'entrez'
-
 DATA_DIR = get_data_dir(MODULE_NAME)
-DEFAULT_CACHE_CONNECTION = get_connection(MODULE_NAME)
 
 GENE_INFO_URL = 'ftp://ftp.ncbi.nlm.nih.gov/gene/DATA/gene_info.gz'
 GENE_INFO_DATA_PATH = os.path.join(DATA_DIR, 'gene_info.gz')
@@ -33,4 +31,12 @@ homologene_columns = [
     'gene_symbol',
     'protein_gi',
     'protein_accession'
+]
+
+default_tax_ids = [
+    '9606',  # Human
+    '10090',  # Mouse
+    '10116',  # Rat
+    '7227',  # Drosophila
+    '4932',  # Yeast
 ]

@@ -2,11 +2,12 @@
 
 import logging
 
-from pybel.constants import FUNCTION, GENE, IDENTIFIER, NAME, NAMESPACE
 from sqlalchemy import and_
 from tqdm import tqdm
 
 from bio2bel import AbstractManager
+from pybel.constants import FUNCTION, GENE, IDENTIFIER, NAME, NAMESPACE
+from .cli_utils import add_populate_to_cli
 from .constants import MODULE_NAME
 from .models import Base, Gene, Homologene, Species, Xref
 from .parser import get_entrez_df, get_homologene_df
@@ -18,6 +19,7 @@ class Manager(AbstractManager):
     """Manages the Entrez Gene database"""
 
     module_name = MODULE_NAME
+    flask_admin_models = [Gene, Homologene, Species, Xref]
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -312,14 +314,7 @@ class Manager(AbstractManager):
     def list_species(self):
         return self.session.query(Species).all()
 
-
-if __name__ == '__main__':
-    logging.basicConfig(level=20, format="%(asctime)s - %(levelname)s - %(message)s", datefmt="%H:%M:%S")
-    log.setLevel(20)
-    m = Manager(connection='sqlite:////Users/cthoyt/Desktop/test_entrez.db')
-    m.drop_all()
-    m.create_all()
-    # turl =  '/Users/cthoyt/.pybel/bio2bel/entrez/Saccharomyces_cerevisiae.gene_info.gz'
-    turl = None
-    tidf = {'9606', '4932', '559292'}
-    m.populate(gene_info_url=turl, tax_id_filter=tidf)
+    @staticmethod
+    def _cli_add_populate(main):
+        """Overwrite the populate method since it needs to check tax identifiers"""
+        return add_populate_to_cli(main)
