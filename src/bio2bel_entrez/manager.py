@@ -6,21 +6,30 @@ import time
 from sqlalchemy import and_
 from tqdm import tqdm
 
-from bio2bel import AbstractManager
+from bio2bel.namespace_manager import NamespaceManagerMixin
 from pybel.constants import FUNCTION, GENE, IDENTIFIER, NAME, NAMESPACE
 from .cli_utils import add_populate_to_cli
 from .constants import MODULE_NAME
 from .models import Base, Gene, Homologene, Species, Xref
 from .parser import get_entrez_df, get_homologene_df
-
+from pybel.manager.models import NamespaceEntry
 log = logging.getLogger(__name__)
 
+species_consortium_mapping = {
+    10090: 'MGI',
+    10116: 'RGD',
+    4932: 'SGD',
+    7227: 'FLYBASE',
+    9606: 'HGNC'
+}
 
-class Manager(AbstractManager):
+
+class Manager(NamespaceManagerMixin):
     """Manages the Entrez Gene database"""
 
     module_name = MODULE_NAME
     flask_admin_models = [Gene, Homologene, Species, Xref]
+    namespace_model = Gene
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -41,6 +50,18 @@ class Manager(AbstractManager):
         """
         return 0 < self.count_genes()
 
+    @staticmethod
+    def _get_identifier(model):
+        return model.entrez_id
+
+    def _create_namespace_entry_from_model(self, model, namespace):
+        return NamespaceEntry(
+            encoding='G',
+            name=model.name,
+            identifier=model.entrez_id,
+            namespace=namespace,
+        )
+
     def get_or_create_species(self, taxonomy_id, **kwargs):
         species = self.species_cache.get(taxonomy_id)
 
@@ -56,15 +77,7 @@ class Manager(AbstractManager):
 
         return species
 
-    _species_consortium_mapping = {
-        10090: 'MGI',
-        10116: 'RGD',
-        4932: 'SGD',
-        7227: 'FLYBASE',
-        9606: 'HGNC'
-    }
-
-    _consortium_species_mapping = dict(map(reversed, _species_consortium_mapping.items()))
+    _consortium_species_mapping = dict(map(reversed, species_consortium_mapping.items()))
 
     def get_gene_by_entrez_id(self, entrez_id):
         """Looks up a gene by entrez identifier
@@ -298,12 +311,19 @@ class Manager(AbstractManager):
         """
         return self.session.query(Species).count()
 
+    def list_species(self):
+        return self.session.query(Species).all()
+
     def summarize(self):
         """Returns a summary dictionary over the content of the database
 
         :rtype: dict[str,int]
         """
-        return dict(genes=self.count_genes(), species=self.count_species(), homologenes=self.count_homologenes())
+        return dict(
+            genes=self.count_genes(),
+            species=self.count_species(),
+            homologenes=self.count_homologenes()
+        )
 
     def list_genes(self, limit=None, offset=None):
         query = self.session.query(Gene)
@@ -314,9 +334,6 @@ class Manager(AbstractManager):
             query = query.offset(offset)
 
         return query.all()
-
-    def list_species(self):
-        return self.session.query(Species).all()
 
     @staticmethod
     def _cli_add_populate(main):
