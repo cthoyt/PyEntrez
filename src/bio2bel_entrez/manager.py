@@ -259,6 +259,11 @@ class Manager(NamespaceManagerMixin):
                 return self.get_gene_by_rgd_name(name)
 
     def _iter_gene_data(self, graph):
+        """
+
+        :param pybel.BELGraph graph:
+        :rtype: tuple[tuple,dict,Gene]
+        """
         for gene_node, data in graph.nodes(data=True):
             gene = self.lookup_node(data)
 
@@ -273,7 +278,7 @@ class Manager(NamespaceManagerMixin):
         :type graph: pybel.BELGraph
         """
         for gene_node, data, gene in self._iter_gene_data(graph):
-            homologene_node = graph.add_node_from_data(gene.homologene.to_bel())
+            homologene_node = graph.add_node_from_data(gene.homologene.as_bel())
             graph.add_is_a(gene_node, homologene_node)
 
     def enrich_orthologies(self, graph):
@@ -283,9 +288,9 @@ class Manager(NamespaceManagerMixin):
         """
         for gene_node, data, gene in self._iter_gene_data(graph):
             for ortholog in gene.homologene.genes:
-                ortholog_node = ortholog.to_bel()
+                ortholog_node = ortholog.as_bel()
 
-                if ortholog_node.to_tuple() == gene_node:
+                if ortholog_node.as_tuple() == gene_node:
                     continue
 
                 graph.add_orthology(gene_node, ortholog_node)

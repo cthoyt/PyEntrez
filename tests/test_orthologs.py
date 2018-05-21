@@ -29,16 +29,27 @@ class TestOrthologs(PopulatedDatabaseMixin):
         node = self.manager.get_gene_by_hgnc_name(hgnc_name)
         self.assertIsNotNone(node)
 
-    def test_mgi(self):
+    def test_enrich_rgd(self):
         graph = BELGraph()
-        graph.add_node_from_data(rgd_node)
+        graph.add_node_from_data(rat_entrez_node)
+        self.assertEqual(1, graph.number_of_nodes())
+        self.assertEqual(0, graph.number_of_edges())
+
+        self.manager.enrich_orthologies(graph)
+
+        self.assertIn(human_entrez_node.as_tuple(), graph)
+        self.assertIn(rat_entrez_node.as_tuple(), graph[human_entrez_node.as_tuple()])
+
+    def test_enrich_hgnc(self):
+        graph = BELGraph()
+        graph.add_node_from_data(human_entrez_node)
+        self.assertEqual(1, graph.number_of_nodes())
+        self.assertEqual(0, graph.number_of_edges())
 
         self.manager.enrich_orthologies(graph)
 
         self.assertIn(rat_entrez_node.as_tuple(), graph)
-        self.assertEqual(1, graph.number_of_edges())
-
-        self.assertIn(rat_entrez_node.as_tuple(), graph[rgd_node.as_tuple()])
+        self.assertIn(rat_entrez_node.as_tuple(), graph[human_entrez_node.as_tuple()])
 
 
 if __name__ == '__main__':

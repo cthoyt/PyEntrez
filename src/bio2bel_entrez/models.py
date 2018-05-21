@@ -50,7 +50,7 @@ class Gene(Base):
     def __repr__(self):
         return self.entrez_id
 
-    def to_bel(self):
+    def as_bel(self):
         """Make PyBEL node data dictionary.
 
         :rtype: dict
