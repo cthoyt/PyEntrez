@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
 
+"""Manager for Bio2BEL Entrez."""
+
 import logging
 import time
 
@@ -8,11 +10,18 @@ from tqdm import tqdm
 
 from bio2bel.namespace_manager import NamespaceManagerMixin
 from pybel.constants import FUNCTION, GENE, IDENTIFIER, NAME, NAMESPACE
+from pybel.manager.models import NamespaceEntry
 from .cli_utils import add_populate_to_cli
 from .constants import MODULE_NAME
 from .models import Base, Gene, Homologene, Species, Xref
 from .parser import get_entrez_df, get_homologene_df
-from pybel.manager.models import NamespaceEntry
+
+__all__ = [
+    'species_consortium_mapping',
+    'consortium_species_mapping',
+    'Manager',
+]
+
 log = logging.getLogger(__name__)
 
 species_consortium_mapping = {
@@ -22,6 +31,8 @@ species_consortium_mapping = {
     7227: 'FLYBASE',
     9606: 'HGNC'
 }
+
+consortium_species_mapping = {v: k for k, v in species_consortium_mapping.items()}
 
 
 class Manager(NamespaceManagerMixin):
@@ -76,8 +87,6 @@ class Manager(NamespaceManagerMixin):
             self.session.add(species)
 
         return species
-
-    _consortium_species_mapping = dict(map(reversed, species_consortium_mapping.items()))
 
     def get_gene_by_entrez_id(self, entrez_id):
         """Looks up a gene by entrez identifier
