@@ -95,6 +95,9 @@ class Manager(NamespaceManagerMixin):
         :rtype: Optional[Gene]
         """
         return self.session.query(Gene).filter(Gene.entrez_id == entrez_id).one_or_none()
+    
+    def get_gene_name(self, name):
+        return self.session.query(Gene).filter(Gene.name == name).all()
 
     def get_gene_by_rgd_name(self, name):
         rgd_name_filter = and_(Species.taxonomy_id == '10116', Gene.name == name)
