@@ -96,7 +96,7 @@ class Manager(NamespaceManagerMixin):
         """
         return self.session.query(Gene).filter(Gene.entrez_id == entrez_id).one_or_none()
     
-    def get_gene_name(self, name):
+    def get_gene_by_name(self, name):
         return self.session.query(Gene).filter(Gene.name == name).all()
 
     def get_gene_by_rgd_name(self, name):
