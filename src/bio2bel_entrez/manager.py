@@ -5,12 +5,15 @@
 import logging
 import time
 
+from bio2bel import AbstractManager
+from bio2bel.manager.bel_manager import BELManagerMixin
+from bio2bel.manager.flask_manager import FlaskMixin
+from bio2bel.manager.namespace_manager import BELNamespaceManagerMixin
+from pybel.constants import FUNCTION, GENE, IDENTIFIER, NAME, NAMESPACE
+from pybel.manager.models import NamespaceEntry
 from sqlalchemy import and_
 from tqdm import tqdm
 
-from bio2bel.namespace_manager import NamespaceManagerMixin
-from pybel.constants import FUNCTION, GENE, IDENTIFIER, NAME, NAMESPACE
-from pybel.manager.models import NamespaceEntry
 from .cli_utils import add_populate_to_cli
 from .constants import MODULE_NAME
 from .models import Base, Gene, Homologene, Species, Xref
@@ -35,12 +38,18 @@ species_consortium_mapping = {
 consortium_species_mapping = {v: k for k, v in species_consortium_mapping.items()}
 
 
-class Manager(NamespaceManagerMixin):
-    """Manages the Entrez Gene database"""
+class Manager(AbstractManager, BELNamespaceManagerMixin, BELManagerMixin, FlaskMixin):
+    """Manages the Entrez Gene database."""
 
     module_name = MODULE_NAME
     flask_admin_models = [Gene, Homologene, Species, Xref]
     namespace_model = Gene
+
+    identifiers_recommended = 'NCBI Gene'
+    identifiers_pattern = '^\d+$'
+    identifiers_miriam = 'MIR:00000069'
+    identifiers_namespace = 'ncbigene'
+    identifiers_url = 'http://identifiers.org/ncbigene/'
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -95,7 +104,7 @@ class Manager(NamespaceManagerMixin):
         :rtype: Optional[Gene]
         """
         return self.session.query(Gene).filter(Gene.entrez_id == entrez_id).one_or_none()
-    
+
     def get_gene_by_name(self, name):
         return self.session.query(Gene).filter(Gene.name == name).all()
 
@@ -142,7 +151,7 @@ class Manager(NamespaceManagerMixin):
         return homologene
 
     def populate_homologene(self, url=None, cache=True, force_download=False, tax_id_filter=None):
-        """Populates the database
+        """Populate the database.
 
         :param Optional[str] url: Homologene data url
         :param bool cache: If true, the data is downloaded to the file system, else it is loaded from the internet
@@ -284,6 +293,12 @@ class Manager(NamespaceManagerMixin):
 
             yield gene_node, data, gene
 
+    def to_bel(self):
+        """Create a BEL graph with all HomoloGene relationships.
+
+        :rtype: pybel.BELGraph
+        """
+
     def enrich_genes_with_homologenes(self, graph):
         """Adds HomoloGene parents to graph
 
@@ -312,27 +327,38 @@ class Manager(NamespaceManagerMixin):
 
         :rtype: int
         """
-        return self.session.query(Gene).count()
+        return self._count_model(Gene)
 
     def count_homologenes(self):
-        """Counts the HomoloGenes in the database
+        """Couns the HomoloGenes in the database.
 
         :rtype: int
         """
-        return self.session.query(Homologene).count()
+        return self._count_model(Homologene)
 
     def count_species(self):
-        """Counts the species in the database
+        """Count the species in the database.
 
         :rtype: int
         """
-        return self.session.query(Species).count()
+        return self._count_model(Species)
 
     def list_species(self):
-        return self.session.query(Species).all()
+        """List all species in the database.
+
+        :rtype: List[Species[
+        """
+        return self._list_model(Species)
+
+    def list_homologenes(self):
+        """List all HomoloGenes in the database.
+
+        :return:
+        """
+        return self._list_model(Homologene)
 
     def summarize(self):
-        """Returns a summary dictionary over the content of the database
+        """Return a summary dictionary over the content of the database.
 
         :rtype: dict[str,int]
         """
@@ -343,6 +369,12 @@ class Manager(NamespaceManagerMixin):
         )
 
     def list_genes(self, limit=None, offset=None):
+        """List genes in the database.
+
+        :param Optional[int] limit:
+        :param Optional[int] offset:
+        :rtype: List[Gene]
+        """
         query = self.session.query(Gene)
         if limit:
             query = query.limit(limit)
@@ -354,5 +386,9 @@ class Manager(NamespaceManagerMixin):
 
     @staticmethod
     def _cli_add_populate(main):
-        """Overwrite the populate method since it needs to check tax identifiers"""
+        """Overwrite the populate method since it needs to check tax identifiers.
+
+        :type main: click.Group
+        :rtype: click.Group
+        """
         return add_populate_to_cli(main)

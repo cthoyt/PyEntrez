@@ -4,7 +4,7 @@ import os
 
 from bio2bel import get_data_dir
 
-MODULE_NAME = 'entrez'
+MODULE_NAME = 'ncbigene'
 DATA_DIR = get_data_dir(MODULE_NAME)
 
 GENE_INFO_URL = 'ftp://ftp.ncbi.nlm.nih.gov/gene/DATA/gene_info.gz'
