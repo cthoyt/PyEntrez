@@ -5,7 +5,7 @@
 from . import cli
 from .manager import Manager
 
-__version__ = '0.1.0-dev'
+__version__ = '0.1.0'
 
 __title__ = 'bio2bel_entrez'
 __description__ = "A package for parsing and storing Entrez Gene"
