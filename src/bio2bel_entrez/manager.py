@@ -3,10 +3,11 @@
 """Manager for Bio2BEL Entrez."""
 
 import logging
+import sys
 import time
 
+import click
 from bio2bel import AbstractManager
-from bio2bel.manager.bel_manager import BELManagerMixin
 from bio2bel.manager.flask_manager import FlaskMixin
 from bio2bel.manager.namespace_manager import BELNamespaceManagerMixin
 from pybel.constants import FUNCTION, GENE, IDENTIFIER, NAME, NAMESPACE
@@ -14,31 +15,36 @@ from pybel.manager.models import NamespaceEntry
 from sqlalchemy import and_
 from tqdm import tqdm
 
-from .cli_utils import add_populate_to_cli
-from .constants import MODULE_NAME
+from .constants import DEFAULT_TAX_IDS, MODULE_NAME
 from .models import Base, Gene, Homologene, Species, Xref
 from .parser import get_entrez_df, get_homologene_df
 
 __all__ = [
-    'species_consortium_mapping',
-    'consortium_species_mapping',
+    'SPECIES_CONSORTIUM_MAPPING',
+    'CONSORTIUM_SPECIES_MAPPING',
     'Manager',
 ]
 
 log = logging.getLogger(__name__)
 
-species_consortium_mapping = {
-    10090: 'MGI',
-    10116: 'RGD',
-    4932: 'SGD',
-    7227: 'FLYBASE',
-    9606: 'HGNC'
+SPECIES_CONSORTIUM_MAPPING = {
+    '10090': 'MGI',
+    '10116': 'RGD',
+    '4932': 'SGD',
+    '7227': 'FLYBASE',
+    '9606': 'HGNC',
 }
 
-consortium_species_mapping = {v: k for k, v in species_consortium_mapping.items()}
+#: All namepace codes (in lowercase) that can map to ncbigene
+VALID_ENTREZ_NAMESPACES = {'egid', 'eg', 'entrez', 'ncbigene'}
+
+CONSORTIUM_SPECIES_MAPPING = {
+    database_code: taxonomy_id
+    for taxonomy_id, database_code in SPECIES_CONSORTIUM_MAPPING.items()
+}
 
 
-class Manager(AbstractManager, BELNamespaceManagerMixin, BELManagerMixin, FlaskMixin):
+class Manager(AbstractManager, BELNamespaceManagerMixin, FlaskMixin):
     """Manages the Entrez Gene database."""
 
     module_name = MODULE_NAME
@@ -71,10 +77,10 @@ class Manager(AbstractManager, BELNamespaceManagerMixin, BELManagerMixin, FlaskM
         return 0 < self.count_genes()
 
     @staticmethod
-    def _get_identifier(model):
+    def _get_identifier(model) -> str:
         return model.entrez_id
 
-    def _create_namespace_entry_from_model(self, model, namespace):
+    def _create_namespace_entry_from_model(self, model, namespace) -> NamespaceEntry:
         return NamespaceEntry(
             encoding='G',
             name=model.name,
@@ -183,7 +189,7 @@ class Manager(AbstractManager, BELNamespaceManagerMixin, BELManagerMixin, FlaskM
         log.info('committed HomoloGene models in %.2f seconds', time.time() - t)
 
     def populate_gene_info(self, url=None, cache=True, force_download=False, interval=None, tax_id_filter=None):
-        """Populates the database (assumes it's already empty)
+        """Populate the database.
 
         :param Optional[str] url: A custom url to download
         :param Optional[int] interval: The number of records to commit at a time
@@ -191,7 +197,6 @@ class Manager(AbstractManager, BELNamespaceManagerMixin, BELManagerMixin, FlaskM
         :param bool force_download: If true, overwrites a previously cached file
         :param Optional[set[str]] tax_id_filter: Species to keep
         """
-        t = time.time()
         df = get_entrez_df(url=url, cache=cache, force_download=force_download)
 
         if tax_id_filter is not None:
@@ -236,7 +241,7 @@ class Manager(AbstractManager, BELNamespaceManagerMixin, BELManagerMixin, FlaskM
         self.session.commit()
 
     def populate(self, gene_info_url=None, interval=None, tax_id_filter=None, homologene_url=None):
-        """Populates the database (assumes it's already empty)
+        """Populate the database.
 
         :param Optional[str] gene_info_url: A custom url to download
         :param Optional[int] interval: The number of records to commit at a time
@@ -247,7 +252,7 @@ class Manager(AbstractManager, BELNamespaceManagerMixin, BELManagerMixin, FlaskM
         self.populate_gene_info(url=gene_info_url, interval=interval, tax_id_filter=tax_id_filter)
 
     def lookup_node(self, data):
-        """Looks up a gene from a PyBEL data dictionary
+        """Look up a gene from a PyBEL data dictionary.
 
         :param dict data: A PyBEL data dictionary
         :rtype: Optional[Gene]
@@ -263,7 +268,7 @@ class Manager(AbstractManager, BELNamespaceManagerMixin, BELManagerMixin, FlaskM
         name = data.get(NAME)
         identifier = data.get(IDENTIFIER)
 
-        if namespace in {'EGID', 'EG', 'ENTREZ'}:
+        if namespace.lower() in VALID_ENTREZ_NAMESPACES:
             if identifier:
                 return self.get_gene_by_entrez_id(identifier)
             elif name:
@@ -271,19 +276,19 @@ class Manager(AbstractManager, BELNamespaceManagerMixin, BELManagerMixin, FlaskM
             else:
                 raise IndexError
 
-        if namespace == 'MGI':
+        if namespace.lower() == 'mgi':
             if name:
                 return self.get_gene_by_mgi_name(name)
 
-        if namespace == 'RGD':
+        if namespace.lower() == 'rgd':
             if name:
                 return self.get_gene_by_rgd_name(name)
 
     def _iter_gene_data(self, graph):
-        """
+        """Iterate over genes in the graph that can be mapped to an Entrez gene.
 
         :param pybel.BELGraph graph:
-        :rtype: tuple[tuple,dict,Gene]
+        :rtype: iter[tuple[tuple,dict,Gene]]
         """
         for gene_node, data in graph.nodes(data=True):
             gene = self.lookup_node(data)
@@ -293,14 +298,8 @@ class Manager(AbstractManager, BELNamespaceManagerMixin, BELManagerMixin, FlaskM
 
             yield gene_node, data, gene
 
-    def to_bel(self):
-        """Create a BEL graph with all HomoloGene relationships.
-
-        :rtype: pybel.BELGraph
-        """
-
     def enrich_genes_with_homologenes(self, graph):
-        """Adds HomoloGene parents to graph
+        """Enrich the nodes in a graph with their HomoloGene parents.
 
         :type graph: pybel.BELGraph
         """
@@ -309,7 +308,7 @@ class Manager(AbstractManager, BELNamespaceManagerMixin, BELManagerMixin, FlaskM
             graph.add_is_a(gene_node, homologene_node)
 
     def enrich_orthologies(self, graph):
-        """Adds ortholog relationships to graph
+        """Adds ortholog relationships to graph.
 
         :type graph: pybel.BELGraph
         """
@@ -322,21 +321,21 @@ class Manager(AbstractManager, BELNamespaceManagerMixin, BELManagerMixin, FlaskM
 
                 graph.add_orthology(gene_node, ortholog_node)
 
-    def count_genes(self):
-        """Counts the genes in the database
+    def count_genes(self) -> int:
+        """Count the genes in the database.
 
         :rtype: int
         """
         return self._count_model(Gene)
 
-    def count_homologenes(self):
-        """Couns the HomoloGenes in the database.
+    def count_homologenes(self) -> int:
+        """Count the HomoloGenes in the database.
 
         :rtype: int
         """
         return self._count_model(Homologene)
 
-    def count_species(self):
+    def count_species(self) -> int:
         """Count the species in the database.
 
         :rtype: int
@@ -392,3 +391,40 @@ class Manager(AbstractManager, BELNamespaceManagerMixin, BELManagerMixin, FlaskM
         :rtype: click.Group
         """
         return add_populate_to_cli(main)
+
+
+def add_populate_to_cli(main):
+    """Add a custom population function to the command line interface.
+
+    :type main: click.Group
+    :rtype: click.Group
+    """
+
+    @main.command()
+    @click.option('--reset', is_flag=True, help='Nuke database first')
+    @click.option('--force', is_flag=True, help='Force overwrite if already populated')
+    @click.option('-t', '--tax-id', default=DEFAULT_TAX_IDS, multiple=True,
+                  help='Keep this taxonomy identifier. Can specify multiple. Defaults to 9606 (human), 10090 (mouse), 10116'
+                       ' (rat), 7227 (fly), and 4932 (yeast).')
+    @click.option('-a', '--all-tax-id', is_flag=True, help='Use all taxonomy identifiers')
+    @click.pass_obj
+    def populate(manager, reset, force, tax_id, all_tax_id):
+        """Populate the database."""
+        if all_tax_id:
+            tax_id_filter = None
+        else:
+            tax_id_filter = tax_id
+
+        if reset:
+            click.echo('Deleting the previous instance of the database')
+            manager.drop_all()
+            click.echo('Creating new models')
+            manager.create_all()
+
+        if manager.is_populated() and not force:
+            click.echo('Database already populated. Use --force to overwrite')
+            sys.exit(0)
+
+        manager.populate(tax_id_filter=tax_id_filter)
+
+    return main

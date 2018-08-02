@@ -24,7 +24,7 @@ gene_info_columns = [
 HOMOLOGENE_BUILD_URL = 'ftp://ftp.ncbi.nih.gov/pub/HomoloGene/current/RELEASE_NUMBER'
 HOMOLOGENE_URL = 'ftp://ftp.ncbi.nih.gov/pub/HomoloGene/current/homologene.data'
 
-homologene_columns = [
+HOMOLOGENE_COLUMNS = [
     'homologene_id',
     'tax_id',
     'gene_id',
@@ -33,7 +33,7 @@ homologene_columns = [
     'protein_accession'
 ]
 
-default_tax_ids = [
+DEFAULT_TAX_IDS = [
     '9606',  # Human
     '10090',  # Mouse
     '10116',  # Rat

@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
 
+"""SQLAlchemy models for Bio2BEL Entrez."""
+
 from pybel.dsl import gene
 from sqlalchemy import Column, ForeignKey, Index, Integer, String, Text
 from sqlalchemy.ext.declarative import declarative_base
@@ -16,7 +18,8 @@ Base = declarative_base()
 
 
 class Species(Base):
-    """Represents a Species"""
+    """Represents a Species."""
+
     __tablename__ = SPECIES_TABLE_NAME
 
     id = Column(Integer, primary_key=True)
@@ -25,6 +28,30 @@ class Species(Base):
 
     def __repr__(self):
         return str(self.taxonomy_id)
+
+
+class Homologene(Base):
+    """Represents a HomoloGene Group."""
+
+    __tablename__ = GROUP_TABLE_NAME
+
+    id = Column(Integer, primary_key=True)
+
+    homologene_id = Column(String(255), index=True, unique=True, nullable=False)
+
+    def __str__(self):
+        return self.homologene_id
+
+    def to_bel(self):
+        """Make PyBEL node data dictionary.
+
+        :rtype: pybel.dsl.gene
+        """
+        return gene(
+            namespace='HOMOLOGENE',
+            name=str(self.homologene_id),
+            identifier=str(self.homologene_id)
+        )
 
 
 class Gene(Base):
@@ -45,7 +72,7 @@ class Gene(Base):
     # modification_date = Column(Date)
 
     homologene_id = Column(Integer, ForeignKey('{}.id'.format(GROUP_TABLE_NAME)))
-    homologene = relationship('Homologene', backref=backref('genes'))
+    homologene = relationship(Homologene, backref=backref('genes'))
 
     def __repr__(self):
         return self.entrez_id
@@ -53,10 +80,10 @@ class Gene(Base):
     def as_bel(self):
         """Make PyBEL node data dictionary.
 
-        :rtype: dict
+        :rtype: pybel.dsl.gene
         """
         return gene(
-            namespace='ENTREZ',
+            namespace=MODULE_NAME,
             name=str(self.name),
             identifier=str(self.entrez_id)
         )
@@ -83,7 +110,7 @@ class Xref(Base):
     id = Column(Integer, primary_key=True)
 
     gene_id = Column(Integer, ForeignKey('{}.id'.format(GENE_TABLE_NAME)), index=True)
-    gene = relationship('Gene', backref=backref('xrefs'))
+    gene = relationship(Gene, backref=backref('xrefs'))
 
     database = Column(String(64), doc='Database name', index=True)
     value = Column(String(255), doc='Database entry name')
@@ -92,27 +119,3 @@ class Xref(Base):
         Index(gene_id, database, value),
         # UniqueConstraint(gene_id, database, value),
     )
-
-
-class Homologene(Base):
-    """Represents a HomoloGene Group."""
-
-    __tablename__ = GROUP_TABLE_NAME
-
-    id = Column(Integer, primary_key=True)
-
-    homologene_id = Column(String(255), index=True, unique=True, nullable=False)
-
-    def __str__(self):
-        return self.homologene_id
-
-    def to_bel(self):
-        """Make PyBEL node data dictionary
-
-        :rtype: dict
-        """
-        return gene(
-            namespace='HOMOLOGENE',
-            name=str(self.homologene_id),
-            identifier=str(self.homologene_id)
-        )
