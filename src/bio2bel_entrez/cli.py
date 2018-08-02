@@ -11,14 +11,14 @@ main = Manager.get_cli()
 
 @main.group()
 def gene():
-    """Gene tools"""
+    """Manage genes."""
 
 
 @gene.command()
 @click.argument('entrez_id')
 @click.pass_obj
 def get(manager, entrez_id):
-    """Looks up a gene"""
+    """Look up a gene."""
     gene_model = manager.get_gene_by_entrez_id(entrez_id)
 
     if gene_model is None:
@@ -38,20 +38,20 @@ def get(manager, entrez_id):
 @click.option('-o', '--offset', type=int)
 @click.pass_obj
 def ls(manager, limit, offset):
-    """List TSV of genes' identifiers, names, then species taxonomy identifiers"""
+    """List TSV of genes' identifiers, names, then species taxonomy identifiers."""
     for g in manager.list_genes(limit=limit, offset=offset):
         click.echo('\t'.join([g.entrez_id, g.name, str(g.species)]))
 
 
 @main.group()
 def species():
-    """Species utils"""
+    """Manage species."""
 
 
-@species.command()
+@species.command()  # noqa: F811
 @click.pass_obj
 def ls(manager):
-    """List species"""
+    """List species."""
     for s in manager.list_species():
         click.echo(s)
 

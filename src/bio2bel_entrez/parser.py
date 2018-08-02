@@ -9,7 +9,7 @@ from urllib.request import urlretrieve
 import pandas as pd
 
 from .constants import (
-    GENE_INFO_DATA_PATH, GENE_INFO_URL, HOMOLOGENE_COLUMNS, HOMOLOGENE_DATA_PATH, HOMOLOGENE_URL, gene_info_columns,
+    GENE_INFO_COLUMNS, GENE_INFO_DATA_PATH, GENE_INFO_URL, HOMOLOGENE_COLUMNS, HOMOLOGENE_DATA_PATH, HOMOLOGENE_URL,
 )
 
 log = logging.getLogger(__name__)
@@ -60,7 +60,7 @@ def get_entrez_df(url=None, cache=True, force_download=False):
         url or GENE_INFO_URL,
         sep='\t',
         na_values=['-', 'NEWENTRY'],
-        usecols=gene_info_columns
+        usecols=GENE_INFO_COLUMNS
     )
 
     return df

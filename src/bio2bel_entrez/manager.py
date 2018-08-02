@@ -6,10 +6,10 @@ import logging
 import sys
 import time
 
-import click
 from bio2bel import AbstractManager
 from bio2bel.manager.flask_manager import FlaskMixin
 from bio2bel.manager.namespace_manager import BELNamespaceManagerMixin
+import click
 from pybel.constants import FUNCTION, GENE, IDENTIFIER, NAME, NAMESPACE
 from pybel.manager.models import NamespaceEntry
 from sqlalchemy import and_
@@ -37,6 +37,7 @@ SPECIES_CONSORTIUM_MAPPING = {
 
 #: All namepace codes (in lowercase) that can map to ncbigene
 VALID_ENTREZ_NAMESPACES = {'egid', 'eg', 'entrez', 'ncbigene'}
+VALID_MGI_NAMESPACES = {'mgi', 'mgd'}
 
 CONSORTIUM_SPECIES_MAPPING = {
     database_code: taxonomy_id
@@ -57,7 +58,7 @@ class Manager(AbstractManager, BELNamespaceManagerMixin, FlaskMixin):
     identifiers_namespace = 'ncbigene'
     identifiers_url = 'http://identifiers.org/ncbigene/'
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, **kwargs):  # noqa: D107
         super().__init__(*args, **kwargs)
 
         self.species_cache = {}
@@ -89,6 +90,11 @@ class Manager(AbstractManager, BELNamespaceManagerMixin, FlaskMixin):
         )
 
     def get_or_create_species(self, taxonomy_id, **kwargs):
+        """Get or create a Species model.
+
+        :param str taxonomy_id: NCBI taxonomy identifier
+        :rtype: Gene
+        """
         species = self.species_cache.get(taxonomy_id)
 
         if species is not None:
@@ -104,29 +110,54 @@ class Manager(AbstractManager, BELNamespaceManagerMixin, FlaskMixin):
         return species
 
     def get_gene_by_entrez_id(self, entrez_id):
-        """Looks up a gene by entrez identifier
+        """Get a gene with the given Entrez Gene identifier.
 
-        :param str entrez_id: Entrez gene identifier
+        :param str entrez_id: Entrez Gene identifier
         :rtype: Optional[Gene]
         """
         return self.session.query(Gene).filter(Gene.entrez_id == entrez_id).one_or_none()
 
-    def get_gene_by_name(self, name):
-        return self.session.query(Gene).filter(Gene.name == name).all()
+    def get_genes_by_name(self, name):
+        """Get a list of genes with the given name (case insensitive).
+
+        :param str name: A gene name
+        :rtype: list[Gene]
+        """
+        return self.session.query(Gene).filter(Gene.name.lower() == name.lower()).all()
 
     def get_gene_by_rgd_name(self, name):
+        """Get a gene by its RGD name.
+
+        :param str name: RGD gene symbol
+        :rtype: Optional[Gene]
+        """
         rgd_name_filter = and_(Species.taxonomy_id == '10116', Gene.name == name)
         return self.session.query(Gene).join(Species).filter(rgd_name_filter).one_or_none()
 
     def get_gene_by_mgi_name(self, name):
+        """Get a gene by its MGI name.
+
+        :param str name: MGI gene symbol
+        :rtype: Optional[Gene]
+        """
         mgi_name_filter = and_(Species.taxonomy_id == '10090', Gene.name == name)
         return self.session.query(Gene).join(Species).filter(mgi_name_filter).one_or_none()
 
     def get_gene_by_hgnc_name(self, name):
+        """Get a gene by its HGNC gene symbol.
+
+        :param str name: HGNC gene symbol
+        :rtype: Optional[Gene]
+        """
         hgnc_name_filter = and_(Species.taxonomy_id == '9606', Gene.name == name)
         return self.session.query(Gene).join(Species).filter(hgnc_name_filter).one_or_none()
 
     def get_or_create_gene(self, entrez_id, **kwargs):
+        """Get or create a Gene model.
+
+        :param str entrez_id: Entrez Gene identifier
+        :rtype: Gene
+        """
         gene = self.gene_cache.get(entrez_id)
 
         if gene is not None:
@@ -142,6 +173,11 @@ class Manager(AbstractManager, BELNamespaceManagerMixin, FlaskMixin):
         return gene
 
     def get_or_create_homologene(self, homologene_id, **kwargs):
+        """Get or create a HomoloGene model.
+
+        :param str homologene_id: HomoloGene Gene identifier
+        :rtype: Homologene
+        """
         homologene = self.homologene_cache.get(homologene_id)
 
         if homologene is not None:
@@ -251,6 +287,26 @@ class Manager(AbstractManager, BELNamespaceManagerMixin, FlaskMixin):
         self.populate_homologene(url=homologene_url, tax_id_filter=tax_id_filter)
         self.populate_gene_info(url=gene_info_url, interval=interval, tax_id_filter=tax_id_filter)
 
+    def _handle_entrez_node(self, identifier=None, name=None):
+        if identifier:
+            return self.get_gene_by_entrez_id(identifier)
+        elif name:
+            return self.get_gene_by_entrez_id(name)
+        else:
+            raise IndexError
+
+    def _handle_hgnc_node(self, identifier=None, name=None):
+        if name:
+            return self.get_gene_by_hgnc_name(name)
+
+    def _handle_rgd_node(self, identifier=None, name=None):
+        if name:
+            return self.get_gene_by_rgd_name(name)
+
+    def _handle_mgi_node(self, identifier=None, name=None):
+        if name:
+            return self.get_gene_by_mgi_name(name)
+
     def lookup_node(self, data):
         """Look up a gene from a PyBEL data dictionary.
 
@@ -269,20 +325,16 @@ class Manager(AbstractManager, BELNamespaceManagerMixin, FlaskMixin):
         identifier = data.get(IDENTIFIER)
 
         if namespace.lower() in VALID_ENTREZ_NAMESPACES:
-            if identifier:
-                return self.get_gene_by_entrez_id(identifier)
-            elif name:
-                return self.get_gene_by_entrez_id(name)
-            else:
-                raise IndexError
+            return self._handle_entrez_node(identifier, name)
 
-        if namespace.lower() == 'mgi':
-            if name:
-                return self.get_gene_by_mgi_name(name)
+        if namespace.lower() == 'hgnc':
+            return self._handle_hgnc_node(identifier, name)
+
+        if namespace.lower() in VALID_MGI_NAMESPACES:
+            return self._handle_mgi_node(identifier, name)
 
         if namespace.lower() == 'rgd':
-            if name:
-                return self.get_gene_by_rgd_name(name)
+            return self._handle_rgd_node(identifier, name)
 
     def _iter_gene_data(self, graph):
         """Iterate over genes in the graph that can be mapped to an Entrez gene.
@@ -307,13 +359,21 @@ class Manager(AbstractManager, BELNamespaceManagerMixin, FlaskMixin):
             homologene_node = graph.add_node_from_data(gene.homologene.as_bel())
             graph.add_is_a(gene_node, homologene_node)
 
-    def enrich_orthologies(self, graph):
-        """Adds ortholog relationships to graph.
+    def enrich_equivalences(self, graph):
+        """Add equivalent node information.
 
         :type graph: pybel.BELGraph
         """
-        for gene_node, data, gene in self._iter_gene_data(graph):
-            for ortholog in gene.homologene.genes:
+        for gene_node, data, entrez_gene in self._iter_gene_data(graph):
+            graph.add_equivalence(gene_node, entrez_gene.as_bel())
+
+    def enrich_orthologies(self, graph):
+        """Add ortholog relationships to graph.
+
+        :type graph: pybel.BELGraph
+        """
+        for gene_node, data, entrez_gene in self._iter_gene_data(graph):
+            for ortholog in entrez_gene.homologene.genes:
                 ortholog_node = ortholog.as_bel()
 
                 if ortholog_node.as_tuple() == gene_node:
@@ -399,7 +459,6 @@ def add_populate_to_cli(main):
     :type main: click.Group
     :rtype: click.Group
     """
-
     @main.command()
     @click.option('--reset', is_flag=True, help='Nuke database first')
     @click.option('--force', is_flag=True, help='Force overwrite if already populated')

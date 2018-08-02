@@ -26,8 +26,8 @@ class Species(Base):
 
     taxonomy_id = Column(String(32), unique=True, nullable=False, index=True, doc='NCBI Taxonomy Identifier')
 
-    def __repr__(self):
-        return str(self.taxonomy_id)
+    def __repr__(self):  # noqa: D105
+        return '<Species taxonomy_id={taxonomy_id}>'.format(taxonomy_id=self.taxonomy_id)
 
 
 class Homologene(Base):
@@ -39,9 +39,6 @@ class Homologene(Base):
 
     homologene_id = Column(String(255), index=True, unique=True, nullable=False)
 
-    def __str__(self):
-        return self.homologene_id
-
     def to_bel(self):
         """Make PyBEL node data dictionary.
 
@@ -52,6 +49,9 @@ class Homologene(Base):
             name=str(self.homologene_id),
             identifier=str(self.homologene_id)
         )
+
+    def __repr__(self):  # noqa: D105
+        return '<HomoloGene id={homologene_id}>'.format(homologene_id=self.homologene_id)
 
 
 class Gene(Base):
@@ -74,9 +74,6 @@ class Gene(Base):
     homologene_id = Column(Integer, ForeignKey('{}.id'.format(GROUP_TABLE_NAME)))
     homologene = relationship(Homologene, backref=backref('genes'))
 
-    def __repr__(self):
-        return self.entrez_id
-
     def as_bel(self):
         """Make PyBEL node data dictionary.
 
@@ -89,7 +86,7 @@ class Gene(Base):
         )
 
     def to_json(self):
-        """Returns this as a JSON dictionary.
+        """Return this Gene as a JSON dictionary.
 
         :rtype: dict
         """
@@ -100,6 +97,9 @@ class Gene(Base):
             description=str(self.description),
             type=str(self.type_of_gene),
         )
+
+    def __repr__(self):  # noqa: D105
+        return '<Gene entrez_id={entrez_id} ({name})>'.format(entrez_id=self.entrez_id, name=self.name)
 
 
 class Xref(Base):

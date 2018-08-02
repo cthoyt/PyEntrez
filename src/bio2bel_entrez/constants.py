@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
 
+"""Constants for Bio2BEL Entrez."""
+
 import os
 
 from bio2bel import get_data_dir
@@ -12,7 +14,7 @@ GENE_INFO_DATA_PATH = os.path.join(DATA_DIR, 'gene_info.gz')
 HOMOLOGENE_DATA_PATH = os.path.join(DATA_DIR, 'homologene.data')
 
 #: Columns fro gene_info.gz that are used
-gene_info_columns = [
+GENE_INFO_COLUMNS = [
     '#tax_id',
     'GeneID',
     'Symbol',

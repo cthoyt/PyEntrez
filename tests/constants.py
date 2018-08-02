@@ -6,7 +6,6 @@ import logging
 import os
 
 from bio2bel.testing import make_temporary_cache_class_mixin
-
 from bio2bel_entrez import Manager
 
 log = logging.getLogger(__name__)
@@ -17,6 +16,8 @@ homologene_test_path = os.path.join(dir_path, 'homologene.data')
 
 
 class PopulatedDatabaseMixin(make_temporary_cache_class_mixin(Manager)):
+    """A test case with a populated database."""
+
     @classmethod
     def populate(cls):
         """Populate the database with Entrez."""

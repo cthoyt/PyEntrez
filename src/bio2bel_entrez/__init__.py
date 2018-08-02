@@ -2,8 +2,7 @@
 
 """A Bio2BEL package for Entrez Gene and HomoloGene."""
 
-from . import cli
-from .manager import Manager
+from .manager import Manager  # noqa: F401
 
 __version__ = '0.1.1-dev'
 
