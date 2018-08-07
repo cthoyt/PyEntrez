@@ -35,10 +35,10 @@ HOMOLOGENE_COLUMNS = [
     'protein_accession'
 ]
 
-DEFAULT_TAX_IDS = [
+DEFAULT_TAX_IDS = (
     '9606',  # Human
     '10090',  # Mouse
     '10116',  # Rat
     '7227',  # Drosophila
     '4932',  # Yeast
-]
+)

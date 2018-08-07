@@ -6,10 +6,10 @@ import logging
 import sys
 import time
 
+import click
 from bio2bel import AbstractManager
 from bio2bel.manager.flask_manager import FlaskMixin
 from bio2bel.manager.namespace_manager import BELNamespaceManagerMixin
-import click
 from pybel.constants import FUNCTION, GENE, IDENTIFIER, NAME, NAMESPACE
 from pybel.manager.models import NamespaceEntry
 from sqlalchemy import and_
@@ -93,7 +93,7 @@ class Manager(AbstractManager, BELNamespaceManagerMixin, FlaskMixin):
         """Get or create a Species model.
 
         :param str taxonomy_id: NCBI taxonomy identifier
-        :rtype: Gene
+        :rtype: Species
         """
         species = self.species_cache.get(taxonomy_id)
 
@@ -198,7 +198,7 @@ class Manager(AbstractManager, BELNamespaceManagerMixin, FlaskMixin):
         :param Optional[str] url: Homologene data url
         :param bool cache: If true, the data is downloaded to the file system, else it is loaded from the internet
         :param bool force_download: If true, overwrites a previously cached file
-        :param Optional[set[str]] tax_id_filter: Species to keep
+        :param Optional[iter[str]] tax_id_filter: Species to keep
         """
         df = get_homologene_df(url=url, cache=cache, force_download=force_download)
 
@@ -231,7 +231,7 @@ class Manager(AbstractManager, BELNamespaceManagerMixin, FlaskMixin):
         :param Optional[int] interval: The number of records to commit at a time
         :param bool cache: If true, the data is downloaded to the file system, else it is loaded from the internet
         :param bool force_download: If true, overwrites a previously cached file
-        :param Optional[set[str]] tax_id_filter: Species to keep
+        :param Optional[iter[str]] tax_id_filter: Species to keep
         """
         df = get_entrez_df(url=url, cache=cache, force_download=force_download)
 
@@ -276,12 +276,13 @@ class Manager(AbstractManager, BELNamespaceManagerMixin, FlaskMixin):
         log.info('committing Entrez Gene models')
         self.session.commit()
 
-    def populate(self, gene_info_url=None, interval=None, tax_id_filter=None, homologene_url=None):
+    def populate(self, gene_info_url=None, interval=None, tax_id_filter=DEFAULT_TAX_IDS, homologene_url=None):
         """Populate the database.
 
         :param Optional[str] gene_info_url: A custom url to download
         :param Optional[int] interval: The number of records to commit at a time
-        :param Optional[set[str]] tax_id_filter: Species to keep
+        :param Optional[iter[str]] tax_id_filter: Species to keep. Defaults to 9606 (human), 10090 (mouse), 10116
+         (rat), 7227 (fly), and 4932 (yeast). Explicitly set to None to get all taxonomies.
         :param Optional[str] homologene_url: A custom url to download
         """
         self.populate_homologene(url=homologene_url, tax_id_filter=tax_id_filter)
@@ -462,15 +463,17 @@ def add_populate_to_cli(main):
     @main.command()
     @click.option('--reset', is_flag=True, help='Nuke database first')
     @click.option('--force', is_flag=True, help='Force overwrite if already populated')
-    @click.option('-t', '--tax-id', default=DEFAULT_TAX_IDS, multiple=True,
-                  help='Keep this taxonomy identifier. Can specify multiple. Defaults to 9606 (human), 10090 (mouse), 10116'
-                       ' (rat), 7227 (fly), and 4932 (yeast).')
+    @click.option('-t', '--tax-id', multiple=True,
+                  help='Keep this taxonomy identifier. Can specify multiple. Defaults to 9606 (human), 10090 (mouse), '
+                       '10116 (rat), 7227 (fly), and 4932 (yeast).')
     @click.option('-a', '--all-tax-id', is_flag=True, help='Use all taxonomy identifiers')
     @click.pass_obj
     def populate(manager, reset, force, tax_id, all_tax_id):
         """Populate the database."""
         if all_tax_id:
             tax_id_filter = None
+        elif tax_id is None:
+            tax_id_filter = DEFAULT_TAX_IDS
         else:
             tax_id_filter = tax_id
 
