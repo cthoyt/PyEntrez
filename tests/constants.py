@@ -6,6 +6,7 @@ import logging
 import os
 
 from bio2bel.testing import make_temporary_cache_class_mixin
+
 from bio2bel_entrez import Manager
 
 log = logging.getLogger(__name__)
