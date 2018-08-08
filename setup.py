@@ -8,8 +8,9 @@ import re
 
 import setuptools
 
+MODULE_NAME = 'entrez'
 PACKAGES = setuptools.find_packages(where='src')
-META_PATH = os.path.join('src', 'bio2bel_entrez', '__init__.py')
+META_PATH = os.path.join('src', f'bio2bel_{MODULE_NAME}', '__init__.py')
 CLASSIFIERS = [
     'Development Status :: 4 - Beta',
     'Environment :: Console',

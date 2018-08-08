@@ -2,7 +2,9 @@
 
 """SQLAlchemy models for Bio2BEL Entrez."""
 
-from pybel.dsl import gene
+from pybel.constants import PROTEIN, RNA
+from pybel.dsl import gene, protein, rna
+from pybel.dsl.nodes import CentralDogma
 from sqlalchemy import Column, ForeignKey, Index, Integer, String, Text
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import backref, relationship
@@ -39,13 +41,35 @@ class Homologene(Base):
 
     homologene_id = Column(String(255), index=True, unique=True, nullable=False)
 
-    def to_bel(self):
+    def as_bel(self, func=None) -> CentralDogma:
+        """"""
+        if func == PROTEIN:
+            return self.as_protein_bel()
+        if func == RNA:
+            return self.as_rna_bel()
+        return self.as_gene_bel()
+
+    def as_gene_bel(self) -> gene:
         """Make PyBEL node data dictionary.
 
         :rtype: pybel.dsl.gene
         """
         return gene(
-            namespace='HOMOLOGENE',
+            namespace='homologene',
+            name=str(self.homologene_id),
+            identifier=str(self.homologene_id)
+        )
+
+    def as_rna_bel(self) -> rna:
+        return rna(
+            namespace='homologene',
+            name=str(self.homologene_id),
+            identifier=str(self.homologene_id)
+        )
+
+    def as_protein_bel(self) -> protein:
+        return protein(
+            namespace='homologene',
             name=str(self.homologene_id),
             identifier=str(self.homologene_id)
         )
@@ -74,12 +98,44 @@ class Gene(Base):
     homologene_id = Column(Integer, ForeignKey('{}.id'.format(GROUP_TABLE_NAME)))
     homologene = relationship(Homologene, backref=backref('genes'))
 
-    def as_bel(self):
+    def as_bel(self, func=None) -> CentralDogma:
+        """"""
+        if func == PROTEIN:
+            return self.as_protein_bel()
+        if func == RNA:
+            return self.as_rna_bel()
+        return self.as_gene_bel()
+
+    def as_gene_bel(self) -> gene:
         """Make PyBEL node data dictionary.
 
         :rtype: pybel.dsl.gene
         """
         return gene(
+            namespace=MODULE_NAME,
+            name=str(self.name),
+            identifier=str(self.entrez_id)
+        )
+
+    @property
+    def is_transcribed(self) -> bool:
+        """Return if this gene can be transcribed to an RNA."""
+        raise NotImplementedError
+
+    def as_rna_bel(self) -> rna:
+        return rna(
+            namespace=MODULE_NAME,
+            name=str(self.name),
+            identifier=str(self.entrez_id)
+        )
+
+    @property
+    def is_translated(self) -> bool:
+        """Return if this gene can be translated to a protein."""
+        raise NotImplementedError
+
+    def as_protein_bel(self) -> protein:
+        return protein(
             namespace=MODULE_NAME,
             name=str(self.name),
             identifier=str(self.entrez_id)

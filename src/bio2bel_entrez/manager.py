@@ -4,13 +4,16 @@
 
 import logging
 import sys
-import time
+from typing import Iterable, List, Tuple
 
 import click
+import networkx as nx
+import time
 from bio2bel import AbstractManager
 from bio2bel.manager.flask_manager import FlaskMixin
 from bio2bel.manager.namespace_manager import BELNamespaceManagerMixin
 from pybel.constants import FUNCTION, GENE, IDENTIFIER, NAME, NAMESPACE
+from pybel.dsl.nodes import BaseEntity
 from pybel.manager.models import NamespaceEntry
 from sqlalchemy import and_
 from tqdm import tqdm
@@ -308,14 +311,16 @@ class Manager(AbstractManager, BELNamespaceManagerMixin, FlaskMixin):
         if name:
             return self.get_gene_by_mgi_name(name)
 
-    def lookup_node(self, data):
+    def lookup_node(self, graph, node):
         """Look up a gene from a PyBEL data dictionary.
 
         :param dict data: A PyBEL data dictionary
         :rtype: Optional[Gene]
         """
-        if data[FUNCTION] != GENE:
-            return
+        if isinstance(node, BaseEntity):
+            data = node
+        else:
+            data = graph.node[node]
 
         namespace = data.get(NAMESPACE)
 
@@ -337,50 +342,82 @@ class Manager(AbstractManager, BELNamespaceManagerMixin, FlaskMixin):
         if namespace.lower() == 'rgd':
             return self._handle_rgd_node(identifier, name)
 
-    def _iter_gene_data(self, graph):
+    def _iter_gene_data(self, graph) -> Iterable[Tuple[tuple, dict, Gene]]:
         """Iterate over genes in the graph that can be mapped to an Entrez gene.
 
         :param pybel.BELGraph graph:
-        :rtype: iter[tuple[tuple,dict,Gene]]
         """
-        for gene_node, data in graph.nodes(data=True):
-            gene = self.lookup_node(data)
+        for node_tuple, node_data in graph.nodes(data=True):
+            gene_model = self.lookup_node(graph, node_tuple)
 
-            if gene is None:
+            if gene_model is None:
                 continue
 
-            yield gene_node, data, gene
+            yield node_tuple, node_data, gene_model
+
+    def normalize_genes(self, graph):
+        """Add identifiers to all Entrez genes.
+
+        :param pybel.BELGraph graph: The BEL graph to enrich
+        """
+        mapping = {}
+
+        for node_tuple, node_data, node_model in self._iter_gene_data(graph):
+            dsl = node_model.as_bel(func=node_data[FUNCTION])
+            graph.node[node_tuple] = dsl
+            mapping[node_tuple] = dsl.as_tuple()
+
+        nx.relabel_nodes(graph, mapping, copy=False)
+
+    def add_namespace_to_graph(self, graph):
+        """Add this manager's namespace to the graph.
+
+        :param pybel.BELGraph graph:
+        """
+        namespace = self.upload_bel_namespace()
+        graph.namespace_url[namespace.keyword] = namespace.url
 
     def enrich_genes_with_homologenes(self, graph):
         """Enrich the nodes in a graph with their HomoloGene parents.
 
         :type graph: pybel.BELGraph
         """
-        for gene_node, data, gene in self._iter_gene_data(graph):
-            homologene_node = graph.add_node_from_data(gene.homologene.as_bel())
-            graph.add_is_a(gene_node, homologene_node)
+        self.add_namespace_to_graph(graph)
+
+        for node_tuple, node_data, gene_model in self._iter_gene_data(graph):
+            homologene = gene_model.homologene
+            if homologene is None:
+                continue
+            graph.add_is_a(node_tuple, homologene.as_bel(node_data[FUNCTION]))
 
     def enrich_equivalences(self, graph):
         """Add equivalent node information.
 
         :type graph: pybel.BELGraph
         """
-        for gene_node, data, entrez_gene in self._iter_gene_data(graph):
-            graph.add_equivalence(gene_node, entrez_gene.as_bel())
+        self.add_namespace_to_graph(graph)
+
+        for node_tuple, node_data, gene_model in self._iter_gene_data(graph):
+            graph.add_equivalence(node_tuple, gene_model.as_bel(node_data[FUNCTION]))
 
     def enrich_orthologies(self, graph):
         """Add ortholog relationships to graph.
 
         :type graph: pybel.BELGraph
         """
-        for gene_node, data, entrez_gene in self._iter_gene_data(graph):
-            for ortholog in entrez_gene.homologene.genes:
-                ortholog_node = ortholog.as_bel()
+        self.add_namespace_to_graph(graph)
 
-                if ortholog_node.as_tuple() == gene_node:
+        for node_tuple, node_data, gene_model in self._iter_gene_data(graph):
+            if not gene_model.homologene:
+                continue  # sad gene doesn't have any friends :/
+
+            for ortholog in gene_model.homologene.genes:
+                ortholog_node = ortholog.as_bel(node_data[FUNCTION])
+
+                if ortholog_node.as_tuple() == node_tuple:
                     continue
 
-                graph.add_orthology(gene_node, ortholog_node)
+                graph.add_orthology(node_tuple, ortholog_node)
 
     def count_genes(self) -> int:
         """Count the genes in the database.
@@ -460,6 +497,7 @@ def add_populate_to_cli(main):
     :type main: click.Group
     :rtype: click.Group
     """
+
     @main.command()
     @click.option('--reset', is_flag=True, help='Nuke database first')
     @click.option('--force', is_flag=True, help='Force overwrite if already populated')
