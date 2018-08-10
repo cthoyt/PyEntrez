@@ -153,7 +153,18 @@ class Manager(AbstractManager, BELNamespaceManagerMixin, FlaskMixin):
         :rtype: Optional[Gene]
         """
         hgnc_name_filter = and_(Species.taxonomy_id == '9606', Gene.name == name)
-        return self.session.query(Gene).join(Species).filter(hgnc_name_filter).one_or_none()
+
+
+        rv =  self.session.query(Gene).join(Species).filter(hgnc_name_filter).one()
+
+        if len(rv) == 0:
+            return
+
+        if len(rv) == 1:
+            return rv[0]
+
+        log.warning('Found multiple rows for Entrez Gene named %s. Returning first of:\n%s', name, '\n'.join(map(str, rv)))
+        return rv[0]
 
     def get_or_create_gene(self, entrez_id, **kwargs):
         """Get or create a Gene model.
