@@ -4,7 +4,7 @@
 
 import logging
 import sys
-from typing import Iterable, List, Optional, Tuple
+from typing import Dict, Iterable, List, Optional, Tuple
 
 import click
 import networkx as nx
@@ -15,11 +15,12 @@ from tqdm import tqdm
 from bio2bel import AbstractManager
 from bio2bel.manager.flask_manager import FlaskMixin
 from bio2bel.manager.namespace_manager import BELNamespaceManagerMixin
+from pybel import BELGraph
 from pybel.constants import FUNCTION, IDENTIFIER, NAME, NAMESPACE
 from pybel.dsl.nodes import BaseEntity
-from pybel import BELGraph
-from pybel.manager.models import NamespaceEntry, Namespace
+from pybel.manager.models import Namespace, NamespaceEntry
 from .constants import DEFAULT_TAX_IDS, MODULE_NAME
+from .homologene_manager import Manager as HomologeneManager
 from .models import Base, Gene, Homologene, Species, Xref
 from .parser import get_entrez_df, get_homologene_df
 
@@ -93,7 +94,7 @@ class Manager(AbstractManager, BELNamespaceManagerMixin, FlaskMixin):
             namespace=namespace,
         )
 
-    def get_or_create_species(self, taxonomy_id: str, **kwargs)-> Species:
+    def get_or_create_species(self, taxonomy_id: str, **kwargs) -> Species:
         """Get or create a Species model.
 
         :param taxonomy_id: NCBI taxonomy identifier
@@ -126,7 +127,7 @@ class Manager(AbstractManager, BELNamespaceManagerMixin, FlaskMixin):
         """
         return self.session.query(Gene).filter(Gene.name.lower() == name.lower()).all()
 
-    def get_gene_by_rgd_name(self, name:str) -> Optional[Gene]:
+    def get_gene_by_rgd_name(self, name: str) -> Optional[Gene]:
         """Get a gene by its RGD name.
 
         :param name: RGD gene symbol
@@ -134,6 +135,7 @@ class Manager(AbstractManager, BELNamespaceManagerMixin, FlaskMixin):
         rgd_name_filter = and_(Species.taxonomy_id == '10116', Gene.name == name)
         return self.session.query(Gene).join(Species).filter(rgd_name_filter).one_or_none()
 
+    def get_gene_by_mgi_name(self, name) -> Optional[Gene]:
         """Get a gene by its MGI name.
 
         :param name: MGI gene symbol
@@ -153,10 +155,11 @@ class Manager(AbstractManager, BELNamespaceManagerMixin, FlaskMixin):
         if len(rv) == 1:
             return rv[0]
 
-        log.warning('Found multiple rows for Entrez Gene named %s. Returning first of:\n%s', name, '\n'.join(map(str, rv)))
+        log.warning('Found multiple rows for Entrez Gene named %s. Returning first of:\n%s', name,
+                    '\n'.join(map(str, rv)))
         return rv[0]
 
-    def get_or_create_gene(self, entrez_id:str, **kwargs) -> Gene:
+    def get_or_create_gene(self, entrez_id: str, **kwargs) -> Gene:
         """Get or create a Gene model.
 
         :param entrez_id: Entrez Gene identifier
@@ -302,20 +305,16 @@ class Manager(AbstractManager, BELNamespaceManagerMixin, FlaskMixin):
         if name:
             return self.get_gene_by_hgnc_name(name)
 
-    def _handle_rgd_node(self, identifier=None, name=None)-> Optional[Gene]:
+    def _handle_rgd_node(self, identifier=None, name=None) -> Optional[Gene]:
         if name:
             return self.get_gene_by_rgd_name(name)
 
-    def _handle_mgi_node(self, identifier=None, name=None)-> Optional[Gene]:
+    def _handle_mgi_node(self, identifier=None, name=None) -> Optional[Gene]:
         if name:
             return self.get_gene_by_mgi_name(name)
 
-    def lookup_node(self, graph: BELGraph, node)-> Optional[Gene]:
-        """Look up a gene from a PyBEL data dictionary.
-
-        :param dict data: A PyBEL data dictionary
-        :rtype: Optional[Gene]
-        """
+    def lookup_node(self, graph: BELGraph, node) -> Optional[Gene]:
+        """Look up a gene from a PyBEL data dictionary."""
         if isinstance(node, BaseEntity):
             data = node
         else:
@@ -341,123 +340,90 @@ class Manager(AbstractManager, BELNamespaceManagerMixin, FlaskMixin):
         if namespace.lower() == 'rgd':
             return self._handle_rgd_node(identifier, name)
 
-    def _iter_gene_data(self, graph) -> Iterable[Tuple[tuple, dict, Gene]]:
-        """Iterate over genes in the graph that can be mapped to an Entrez gene.
-
-        :param pybel.BELGraph graph:
-        """
-        for node_tuple, node_data in graph.nodes(data=True):
-            gene_model = self.lookup_node(graph, node_tuple)
+    def _iter_gene_data(self, graph: BELGraph) -> Iterable[Tuple[BaseEntity, Gene]]:
+        """Iterate over genes in the graph that can be mapped to an Entrez gene."""
+        for _, node_data in graph.nodes(data=True):
+            gene_model = self.lookup_node(graph, node_data)
 
             if gene_model is None:
                 continue
 
-            yield node_tuple, node_data, gene_model
+            yield node_data, gene_model
 
-    def normalize_genes(self, graph):
-        """Add identifiers to all Entrez genes.
-
-        :param pybel.BELGraph graph: The BEL graph to enrich
-        """
+    def normalize_genes(self, graph: BELGraph):
+        """Add identifiers to all Entrez genes."""
         mapping = {}
 
-        for node_tuple, node_data, node_model in self._iter_gene_data(graph):
+        for node_data, node_model in self._iter_gene_data(graph):
+            node_tuple = node_data.as_tuple()
             dsl = node_model.as_bel(func=node_data[FUNCTION])
             graph.node[node_tuple] = dsl
             mapping[node_tuple] = dsl.as_tuple()
 
         nx.relabel_nodes(graph, mapping, copy=False)
 
-    def add_namespace_to_graph(self, graph):
-        """Add this manager's namespace to the graph.
-
-        :param pybel.BELGraph graph:
-        """
-        namespace = self.upload_bel_namespace()
-        graph.namespace_url[namespace.keyword] = namespace.url
-
-    def enrich_genes_with_homologenes(self, graph):
-        """Enrich the nodes in a graph with their HomoloGene parents.
-
-        :type graph: pybel.BELGraph
-        """
+    def enrich_genes_with_homologenes(self, graph: BELGraph):
+        """Enrich the nodes in a graph with their HomoloGene parents."""
         self.add_namespace_to_graph(graph)
+        self.add_homologene_namespace_to_graph(graph)
 
-        for node_tuple, node_data, gene_model in self._iter_gene_data(graph):
+        for node_data, gene_model in self._iter_gene_data(graph):
             homologene = gene_model.homologene
             if homologene is None:
                 continue
-            graph.add_is_a(node_tuple, homologene.as_bel(node_data[FUNCTION]))
+            graph.add_is_a(node_data, homologene.as_bel(node_data[FUNCTION]))
 
-    def enrich_equivalences(self, graph):
-        """Add equivalent node information.
-
-        :type graph: pybel.BELGraph
-        """
+    def enrich_equivalences(self, graph: BELGraph):
+        """Add equivalent node information."""
         self.add_namespace_to_graph(graph)
 
-        for node_tuple, node_data, gene_model in self._iter_gene_data(graph):
-            graph.add_equivalence(node_tuple, gene_model.as_bel(node_data[FUNCTION]))
+        for node_data, gene_model in self._iter_gene_data(graph):
+            graph.add_equivalence(node_data, gene_model.as_bel(node_data[FUNCTION]))
 
-    def enrich_orthologies(self, graph):
-        """Add ortholog relationships to graph.
-
-        :type graph: pybel.BELGraph
-        """
+    def enrich_orthologies(self, graph: BELGraph):
+        """Add ortholog relationships to graph."""
         self.add_namespace_to_graph(graph)
+        self.add_homologene_namespace_to_graph(graph)
 
-        for node_tuple, node_data, gene_model in self._iter_gene_data(graph):
+        for node_data, gene_model in self._iter_gene_data(graph):
             if not gene_model.homologene:
                 continue  # sad gene doesn't have any friends :/
 
             for ortholog in gene_model.homologene.genes:
                 ortholog_node = ortholog.as_bel(node_data[FUNCTION])
 
-                if ortholog_node.as_tuple() == node_tuple:
+                if ortholog_node.as_tuple() == node_data.as_tuple():
                     continue
 
-                graph.add_orthology(node_tuple, ortholog_node)
+                graph.add_orthology(node_data, ortholog_node)
+
+    def add_homologene_namespace_to_graph(self, graph: BELGraph) -> Namespace:
+        """Add the homologene namespace to the graph."""
+        homologene_manager = HomologeneManager(engine=self.engine, session=self.session)
+        return homologene_manager.add_namespace_to_graph(graph)
 
     def count_genes(self) -> int:
-        """Count the genes in the database.
-
-        :rtype: int
-        """
+        """Count the genes in the database."""
         return self._count_model(Gene)
 
     def count_homologenes(self) -> int:
-        """Count the HomoloGenes in the database.
-
-        :rtype: int
-        """
+        """Count the HomoloGenes in the database."""
         return self._count_model(Homologene)
 
     def count_species(self) -> int:
-        """Count the species in the database.
-
-        :rtype: int
-        """
+        """Count the species in the database."""
         return self._count_model(Species)
 
-    def list_species(self):
-        """List all species in the database.
-
-        :rtype: List[Species[
-        """
+    def list_species(self) -> List[Species]:
+        """List all species in the database."""
         return self._list_model(Species)
 
-    def list_homologenes(self):
-        """List all HomoloGenes in the database.
-
-        :return:
-        """
+    def list_homologenes(self) -> List[Homologene]:
+        """List all HomoloGenes in the database."""
         return self._list_model(Homologene)
 
-    def summarize(self):
-        """Return a summary dictionary over the content of the database.
-
-        :rtype: dict[str,int]
-        """
+    def summarize(self) -> Dict[str, int]:
+        """Return a summary dictionary over the content of the database."""
         return dict(
             genes=self.count_genes(),
             species=self.count_species(),
@@ -481,7 +447,7 @@ class Manager(AbstractManager, BELNamespaceManagerMixin, FlaskMixin):
         return query.all()
 
     @staticmethod
-    def _cli_add_populate(main):
+    def _cli_add_populate(main: click.Group) -> click.Group:
         """Overwrite the populate method since it needs to check tax identifiers.
 
         :type main: click.Group
@@ -490,12 +456,8 @@ class Manager(AbstractManager, BELNamespaceManagerMixin, FlaskMixin):
         return add_populate_to_cli(main)
 
 
-def add_populate_to_cli(main):
-    """Add a custom population function to the command line interface.
-
-    :type main: click.Group
-    :rtype: click.Group
-    """
+def add_populate_to_cli(main: click.Group) -> click.Group:  # noqa: D202
+    """Add a custom population function to the command line interface."""
 
     @main.command()
     @click.option('--reset', is_flag=True, help='Nuke database first')

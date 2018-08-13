@@ -24,7 +24,7 @@ CLASSIFIERS = [
 ]
 INSTALL_REQUIRES = [
     'pybel>=0.11.11',
-    'bio2bel>=0.1.0',
+    'bio2bel>=0.1.4',
     'click',
     'pandas',
     'sqlalchemy',
@@ -32,7 +32,6 @@ INSTALL_REQUIRES = [
     'flask',
     'flask-admin',
     'tqdm',
-
 ]
 EXTRAS_REQUIRE = {
     'web': ['flask', 'flask_admin'],

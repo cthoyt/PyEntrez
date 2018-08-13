@@ -4,12 +4,11 @@
 
 from itertools import chain
 
-from pybel import BELGraph
-from pybel.dsl import gene
-
 from bio2bel_entrez.constants import MODULE_NAME
 from bio2bel_entrez.manager import VALID_ENTREZ_NAMESPACES
-from tests.constants import PopulatedDatabaseMixin  # noqa: I100, I201, I202
+from pybel import BELGraph
+from pybel.dsl import gene
+from tests.constants import PopulatedDatabaseMixin
 
 rgd_gene_symbol = 'Mapk1'
 rgd_node = gene(namespace='RGD', name=rgd_gene_symbol)

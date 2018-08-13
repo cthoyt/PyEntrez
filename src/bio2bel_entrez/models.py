@@ -2,13 +2,14 @@
 
 """SQLAlchemy models for Bio2BEL Entrez."""
 
-from pybel.constants import PROTEIN, RNA
-from pybel.dsl import gene, protein, rna
-from pybel.dsl.nodes import CentralDogma
+from typing import Optional
+
 from sqlalchemy import Column, ForeignKey, Index, Integer, String, Text
-from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.ext.declarative import DeclarativeMeta, declarative_base
 from sqlalchemy.orm import backref, relationship
 
+from pybel.constants import GENE, MIRNA, PROTEIN, RNA
+from pybel.dsl import CentralDogma, gene, mirna, protein, rna
 from .constants import MODULE_NAME
 
 GENE_TABLE_NAME = '{}_gene'.format(MODULE_NAME)
@@ -16,7 +17,7 @@ GROUP_TABLE_NAME = '{}_homologene'.format(MODULE_NAME)
 SPECIES_TABLE_NAME = '{}_species'.format(MODULE_NAME)
 XREF_TABLE_NAME = '{}_xref'.format(MODULE_NAME)
 
-Base = declarative_base()
+Base: DeclarativeMeta = declarative_base()
 
 
 class Species(Base):
@@ -41,34 +42,20 @@ class Homologene(Base):
 
     homologene_id = Column(String(255), index=True, unique=True, nullable=False)
 
-    def as_bel(self, func=None) -> CentralDogma:
-        """"""
+    def as_bel(self, func: Optional[str] = None) -> CentralDogma:
+        """Make a PyBEL DSL object from this HomoloGene."""
         if func == PROTEIN:
-            return self.as_protein_bel()
-        if func == RNA:
-            return self.as_rna_bel()
-        return self.as_gene_bel()
+            dsl = protein
+        elif func == RNA:
+            dsl = rna
+        elif func == MIRNA:
+            dsl = mirna
+        elif func == GENE or func is None:
+            dsl = gene
+        else:
+            raise ValueError(f'invalid func: {func}')
 
-    def as_gene_bel(self) -> gene:
-        """Make PyBEL node data dictionary.
-
-        :rtype: pybel.dsl.gene
-        """
-        return gene(
-            namespace='homologene',
-            name=str(self.homologene_id),
-            identifier=str(self.homologene_id)
-        )
-
-    def as_rna_bel(self) -> rna:
-        return rna(
-            namespace='homologene',
-            name=str(self.homologene_id),
-            identifier=str(self.homologene_id)
-        )
-
-    def as_protein_bel(self) -> protein:
-        return protein(
+        return dsl(
             namespace='homologene',
             name=str(self.homologene_id),
             identifier=str(self.homologene_id)
@@ -99,19 +86,19 @@ class Gene(Base):
     homologene = relationship(Homologene, backref=backref('genes'))
 
     def as_bel(self, func=None) -> CentralDogma:
-        """"""
+        """Make a PyBEL DSL object from this gene."""
         if func == PROTEIN:
-            return self.as_protein_bel()
-        if func == RNA:
-            return self.as_rna_bel()
-        return self.as_gene_bel()
+            dsl = protein
+        elif func == RNA:
+            dsl = rna
+        elif func == MIRNA:
+            dsl = mirna
+        elif func == GENE or func is None:
+            dsl = gene
+        else:
+            raise ValueError(f'invalid func: {func}')
 
-    def as_gene_bel(self) -> gene:
-        """Make PyBEL node data dictionary.
-
-        :rtype: pybel.dsl.gene
-        """
-        return gene(
+        return dsl(
             namespace=MODULE_NAME,
             name=str(self.name),
             identifier=str(self.entrez_id)
@@ -122,24 +109,10 @@ class Gene(Base):
         """Return if this gene can be transcribed to an RNA."""
         raise NotImplementedError
 
-    def as_rna_bel(self) -> rna:
-        return rna(
-            namespace=MODULE_NAME,
-            name=str(self.name),
-            identifier=str(self.entrez_id)
-        )
-
     @property
     def is_translated(self) -> bool:
         """Return if this gene can be translated to a protein."""
         raise NotImplementedError
-
-    def as_protein_bel(self) -> protein:
-        return protein(
-            namespace=MODULE_NAME,
-            name=str(self.name),
-            identifier=str(self.entrez_id)
-        )
 
     def to_json(self):
         """Return this Gene as a JSON dictionary.
