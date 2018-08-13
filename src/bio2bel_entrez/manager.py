@@ -4,20 +4,21 @@
 
 import logging
 import sys
-from typing import Iterable, List, Tuple
+from typing import Iterable, List, Optional, Tuple
 
 import click
 import networkx as nx
 import time
-from bio2bel import AbstractManager
-from bio2bel.manager.flask_manager import FlaskMixin
-from bio2bel.manager.namespace_manager import BELNamespaceManagerMixin
-from pybel.constants import FUNCTION, GENE, IDENTIFIER, NAME, NAMESPACE
-from pybel.dsl.nodes import BaseEntity
-from pybel.manager.models import NamespaceEntry
 from sqlalchemy import and_
 from tqdm import tqdm
 
+from bio2bel import AbstractManager
+from bio2bel.manager.flask_manager import FlaskMixin
+from bio2bel.manager.namespace_manager import BELNamespaceManagerMixin
+from pybel.constants import FUNCTION, IDENTIFIER, NAME, NAMESPACE
+from pybel.dsl.nodes import BaseEntity
+from pybel import BELGraph
+from pybel.manager.models import NamespaceEntry, Namespace
 from .constants import DEFAULT_TAX_IDS, MODULE_NAME
 from .models import Base, Gene, Homologene, Species, Xref
 from .parser import get_entrez_df, get_homologene_df
@@ -84,7 +85,7 @@ class Manager(AbstractManager, BELNamespaceManagerMixin, FlaskMixin):
     def _get_identifier(model) -> str:
         return model.entrez_id
 
-    def _create_namespace_entry_from_model(self, model, namespace) -> NamespaceEntry:
+    def _create_namespace_entry_from_model(self, model: Gene, namespace: Namespace) -> NamespaceEntry:
         return NamespaceEntry(
             encoding='G',
             name=model.name,
@@ -92,11 +93,10 @@ class Manager(AbstractManager, BELNamespaceManagerMixin, FlaskMixin):
             namespace=namespace,
         )
 
-    def get_or_create_species(self, taxonomy_id, **kwargs):
+    def get_or_create_species(self, taxonomy_id: str, **kwargs)-> Species:
         """Get or create a Species model.
 
-        :param str taxonomy_id: NCBI taxonomy identifier
-        :rtype: Species
+        :param taxonomy_id: NCBI taxonomy identifier
         """
         species = self.species_cache.get(taxonomy_id)
 
@@ -112,46 +112,37 @@ class Manager(AbstractManager, BELNamespaceManagerMixin, FlaskMixin):
 
         return species
 
-    def get_gene_by_entrez_id(self, entrez_id):
-        """Get a gene with the given Entrez Gene identifier.
+    def get_gene_by_entrez_id(self, entrez_id: str) -> Optional[Gene]:
+        """Get a gene with the given Entrez Gene identifier, if it exists.
 
-        :param str entrez_id: Entrez Gene identifier
-        :rtype: Optional[Gene]
+        :param entrez_id: Entrez Gene identifier
         """
         return self.session.query(Gene).filter(Gene.entrez_id == entrez_id).one_or_none()
 
-    def get_genes_by_name(self, name):
+    def get_genes_by_name(self, name) -> List[Gene]:
         """Get a list of genes with the given name (case insensitive).
 
-        :param str name: A gene name
-        :rtype: list[Gene]
+        :param name: A gene name
         """
         return self.session.query(Gene).filter(Gene.name.lower() == name.lower()).all()
 
-    def get_gene_by_rgd_name(self, name):
+    def get_gene_by_rgd_name(self, name:str) -> Optional[Gene]:
         """Get a gene by its RGD name.
 
-        :param str name: RGD gene symbol
-        :rtype: Optional[Gene]
+        :param name: RGD gene symbol
         """
         rgd_name_filter = and_(Species.taxonomy_id == '10116', Gene.name == name)
         return self.session.query(Gene).join(Species).filter(rgd_name_filter).one_or_none()
 
-    def get_gene_by_mgi_name(self, name):
         """Get a gene by its MGI name.
 
-        :param str name: MGI gene symbol
-        :rtype: Optional[Gene]
+        :param name: MGI gene symbol
         """
         mgi_name_filter = and_(Species.taxonomy_id == '10090', Gene.name == name)
         return self.session.query(Gene).join(Species).filter(mgi_name_filter).one_or_none()
 
-    def get_gene_by_hgnc_name(self, name):
-        """Get a gene by its HGNC gene symbol.
-
-        :param str name: HGNC gene symbol
-        :rtype: Optional[Gene]
-        """
+    def get_gene_by_hgnc_name(self, name: str) -> Optional[Gene]:
+        """Get a gene by its HGNC gene symbol."""
         hgnc_name_filter = and_(Species.taxonomy_id == '9606', Gene.name == name)
 
         rv = self.session.query(Gene).join(Species).filter(hgnc_name_filter).all()
@@ -165,11 +156,10 @@ class Manager(AbstractManager, BELNamespaceManagerMixin, FlaskMixin):
         log.warning('Found multiple rows for Entrez Gene named %s. Returning first of:\n%s', name, '\n'.join(map(str, rv)))
         return rv[0]
 
-    def get_or_create_gene(self, entrez_id, **kwargs):
+    def get_or_create_gene(self, entrez_id:str, **kwargs) -> Gene:
         """Get or create a Gene model.
 
-        :param str entrez_id: Entrez Gene identifier
-        :rtype: Gene
+        :param entrez_id: Entrez Gene identifier
         """
         gene = self.gene_cache.get(entrez_id)
 
@@ -185,11 +175,10 @@ class Manager(AbstractManager, BELNamespaceManagerMixin, FlaskMixin):
 
         return gene
 
-    def get_or_create_homologene(self, homologene_id, **kwargs):
+    def get_or_create_homologene(self, homologene_id: str, **kwargs) -> Homologene:
         """Get or create a HomoloGene model.
 
-        :param str homologene_id: HomoloGene Gene identifier
-        :rtype: Homologene
+        :param homologene_id: HomoloGene Gene identifier
         """
         homologene = self.homologene_cache.get(homologene_id)
 
@@ -205,7 +194,7 @@ class Manager(AbstractManager, BELNamespaceManagerMixin, FlaskMixin):
 
         return homologene
 
-    def populate_homologene(self, url=None, cache=True, force_download=False, tax_id_filter=None):
+    def populate_homologene(self, url=None, cache=True, force_download=False, tax_id_filter=None) -> None:
         """Populate the database.
 
         :param Optional[str] url: Homologene data url
@@ -309,19 +298,19 @@ class Manager(AbstractManager, BELNamespaceManagerMixin, FlaskMixin):
         else:
             raise IndexError
 
-    def _handle_hgnc_node(self, identifier=None, name=None):
+    def _handle_hgnc_node(self, identifier=None, name=None) -> Optional[Gene]:
         if name:
             return self.get_gene_by_hgnc_name(name)
 
-    def _handle_rgd_node(self, identifier=None, name=None):
+    def _handle_rgd_node(self, identifier=None, name=None)-> Optional[Gene]:
         if name:
             return self.get_gene_by_rgd_name(name)
 
-    def _handle_mgi_node(self, identifier=None, name=None):
+    def _handle_mgi_node(self, identifier=None, name=None)-> Optional[Gene]:
         if name:
             return self.get_gene_by_mgi_name(name)
 
-    def lookup_node(self, graph, node):
+    def lookup_node(self, graph: BELGraph, node)-> Optional[Gene]:
         """Look up a gene from a PyBEL data dictionary.
 
         :param dict data: A PyBEL data dictionary
