@@ -154,8 +154,7 @@ class Manager(AbstractManager, BELNamespaceManagerMixin, FlaskMixin):
         """
         hgnc_name_filter = and_(Species.taxonomy_id == '9606', Gene.name == name)
 
-
-        rv =  self.session.query(Gene).join(Species).filter(hgnc_name_filter).one()
+        rv = self.session.query(Gene).join(Species).filter(hgnc_name_filter).all()
 
         if len(rv) == 0:
             return
