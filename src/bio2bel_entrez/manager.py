@@ -4,6 +4,7 @@
 
 import logging
 import sys
+from operator import itemgetter
 from typing import Dict, Iterable, List, Optional, Tuple
 
 import click
@@ -155,8 +156,11 @@ class Manager(AbstractManager, BELNamespaceManagerMixin, FlaskMixin):
         if len(rv) == 1:
             return rv[0]
 
-        log.warning('Found multiple rows for Entrez Gene named %s. Returning first of:\n%s', name,
-                    '\n'.join(map(str, rv)))
+        rv = sorted(rv, key=itemgetter('entrez_id'))
+
+        log.warning('Found multiple rows for Entrez Gene named %s. Returning lowest Entrez Gene identifier of:\n%s',
+                    name, '\n'.join(map(str, rv)))
+
         return rv[0]
 
     def get_or_create_gene(self, entrez_id: str, **kwargs) -> Gene:
