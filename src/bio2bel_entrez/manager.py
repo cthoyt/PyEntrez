@@ -8,7 +8,6 @@ from operator import itemgetter
 from typing import Dict, Iterable, List, Optional, Tuple
 
 import click
-import networkx as nx
 import time
 from sqlalchemy import and_
 from tqdm import tqdm
@@ -20,6 +19,7 @@ from pybel import BELGraph
 from pybel.constants import FUNCTION, IDENTIFIER, NAME, NAMESPACE
 from pybel.dsl.nodes import BaseEntity
 from pybel.manager.models import Namespace, NamespaceEntry
+from pybel.struct.utils import relabel_inplace
 from .constants import DEFAULT_TAX_IDS, MODULE_NAME
 from .homologene_manager import Manager as HomologeneManager
 from .models import Base, Gene, Homologene, Species, Xref
@@ -317,20 +317,15 @@ class Manager(AbstractManager, BELNamespaceManagerMixin, FlaskMixin):
         if name:
             return self.get_gene_by_mgi_name(name)
 
-    def lookup_node(self, graph: BELGraph, node) -> Optional[Gene]:
+    def lookup_node(self, node: BaseEntity) -> Optional[Gene]:
         """Look up a gene from a PyBEL data dictionary."""
-        if isinstance(node, BaseEntity):
-            data = node
-        else:
-            data = graph.node[node]
-
-        namespace = data.get(NAMESPACE)
+        namespace = node.get(NAMESPACE)
 
         if namespace is None:
             return
 
-        name = data.get(NAME)
-        identifier = data.get(IDENTIFIER)
+        name = node.name
+        identifier = node.identifier
 
         if namespace.lower() in VALID_ENTREZ_NAMESPACES:
             return self._handle_entrez_node(identifier, name)
@@ -344,34 +339,32 @@ class Manager(AbstractManager, BELNamespaceManagerMixin, FlaskMixin):
         if namespace.lower() == 'rgd':
             return self._handle_rgd_node(identifier, name)
 
-    def _iter_gene_data(self, graph: BELGraph) -> Iterable[Tuple[BaseEntity, Gene]]:
+    def iter_genes(self, graph: BELGraph) -> Iterable[Tuple[BaseEntity, Gene]]:
         """Iterate over genes in the graph that can be mapped to an Entrez gene."""
-        for _, node_data in graph.nodes(data=True):
-            gene_model = self.lookup_node(graph, node_data)
+        for _, node in graph.nodes(data=True):
+            gene_model = self.lookup_node(node)
 
-            if gene_model is None:
-                continue
-
-            yield node_data, gene_model
+            if gene_model is not None:
+                yield node, gene_model
 
     def normalize_genes(self, graph: BELGraph):
         """Add identifiers to all Entrez genes."""
         mapping = {}
 
-        for node_data, node_model in self._iter_gene_data(graph):
-            node_tuple = node_data.as_tuple()
-            dsl = node_model.as_bel(func=node_data[FUNCTION])
-            graph.node[node_tuple] = dsl
+        for node, gene_model in self.iter_genes(graph):
+            node_tuple = node.as_tuple()
+            dsl = gene_model.as_bel(func=node.function)
+            graph._node[node_tuple] = dsl
             mapping[node_tuple] = dsl.as_tuple()
 
-        nx.relabel_nodes(graph, mapping, copy=False)
+        relabel_inplace(graph, mapping)
 
     def enrich_genes_with_homologenes(self, graph: BELGraph):
         """Enrich the nodes in a graph with their HomoloGene parents."""
         self.add_namespace_to_graph(graph)
         self.add_homologene_namespace_to_graph(graph)
 
-        for node_data, gene_model in self._iter_gene_data(graph):
+        for node_data, gene_model in self.iter_genes(graph):
             homologene = gene_model.homologene
             if homologene is None:
                 continue
@@ -381,25 +374,25 @@ class Manager(AbstractManager, BELNamespaceManagerMixin, FlaskMixin):
         """Add equivalent node information."""
         self.add_namespace_to_graph(graph)
 
-        for node_data, gene_model in self._iter_gene_data(graph):
-            graph.add_equivalence(node_data, gene_model.as_bel(node_data[FUNCTION]))
+        for node, gene_model in list(self.iter_genes(graph)):
+            graph.add_equivalence(node, gene_model.as_bel(node[FUNCTION]))
 
     def enrich_orthologies(self, graph: BELGraph):
         """Add ortholog relationships to graph."""
         self.add_namespace_to_graph(graph)
         self.add_homologene_namespace_to_graph(graph)
 
-        for node_data, gene_model in self._iter_gene_data(graph):
+        for node, gene_model in list(self.iter_genes(graph)):
             if not gene_model.homologene:
                 continue  # sad gene doesn't have any friends :/
 
             for ortholog in gene_model.homologene.genes:
-                ortholog_node = ortholog.as_bel(node_data[FUNCTION])
+                ortholog_node = ortholog.as_bel(node[FUNCTION])
 
-                if ortholog_node.as_tuple() == node_data.as_tuple():
+                if ortholog_node.as_tuple() == node.as_tuple():
                     continue
 
-                graph.add_orthology(node_data, ortholog_node)
+                graph.add_orthology(node, ortholog_node)
 
     def add_homologene_namespace_to_graph(self, graph: BELGraph) -> Namespace:
         """Add the homologene namespace to the graph."""
