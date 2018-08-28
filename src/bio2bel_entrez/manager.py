@@ -4,7 +4,6 @@
 
 import logging
 import sys
-from operator import itemgetter
 from typing import Dict, Iterable, List, Optional, Tuple
 
 import click
@@ -16,8 +15,8 @@ from bio2bel import AbstractManager
 from bio2bel.manager.flask_manager import FlaskMixin
 from bio2bel.manager.namespace_manager import BELNamespaceManagerMixin
 from pybel import BELGraph
-from pybel.constants import FUNCTION, IDENTIFIER, NAME, NAMESPACE
-from pybel.dsl.nodes import BaseEntity
+from pybel.constants import FUNCTION, NAMESPACE
+from pybel.dsl import BaseEntity
 from pybel.manager.models import Namespace, NamespaceEntry
 from pybel.struct.utils import relabel_inplace
 from .constants import DEFAULT_TAX_IDS, MODULE_NAME
@@ -320,7 +319,6 @@ class Manager(AbstractManager, BELNamespaceManagerMixin, FlaskMixin):
     def lookup_node(self, node: BaseEntity) -> Optional[Gene]:
         """Look up a gene from a PyBEL data dictionary."""
         namespace = node.get(NAMESPACE)
-
         if namespace is None:
             return
 

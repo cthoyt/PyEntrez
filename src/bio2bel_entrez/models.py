@@ -8,8 +8,7 @@ from sqlalchemy import Column, ForeignKey, Index, Integer, String, Text
 from sqlalchemy.ext.declarative import DeclarativeMeta, declarative_base
 from sqlalchemy.orm import backref, relationship
 
-from pybel.constants import GENE, MIRNA, PROTEIN, RNA
-from pybel.dsl import CentralDogma, gene, mirna, protein, rna
+from pybel.dsl import CentralDogma, FUNC_TO_DSL, gene
 from .constants import MODULE_NAME
 
 GENE_TABLE_NAME = '{}_gene'.format(MODULE_NAME)
@@ -44,16 +43,7 @@ class Homologene(Base):
 
     def as_bel(self, func: Optional[str] = None) -> CentralDogma:
         """Make a PyBEL DSL object from this HomoloGene."""
-        if func == PROTEIN:
-            dsl = protein
-        elif func == RNA:
-            dsl = rna
-        elif func == MIRNA:
-            dsl = mirna
-        elif func == GENE or func is None:
-            dsl = gene
-        else:
-            raise ValueError(f'invalid func: {func}')
+        dsl = gene if func is None else FUNC_TO_DSL[func]
 
         return dsl(
             namespace='homologene',
@@ -66,7 +56,7 @@ class Homologene(Base):
 
 
 class Gene(Base):
-    """Represents a Gene."""
+    """Represents a gene."""
 
     __tablename__ = GENE_TABLE_NAME
 
@@ -87,21 +77,12 @@ class Gene(Base):
 
     def as_bel(self, func=None) -> CentralDogma:
         """Make a PyBEL DSL object from this gene."""
-        if func == PROTEIN:
-            dsl = protein
-        elif func == RNA:
-            dsl = rna
-        elif func == MIRNA:
-            dsl = mirna
-        elif func == GENE or func is None:
-            dsl = gene
-        else:
-            raise ValueError(f'invalid func: {func}')
+        dsl = gene if func is None else FUNC_TO_DSL[func]
 
         return dsl(
             namespace=MODULE_NAME,
             name=str(self.name),
-            identifier=str(self.entrez_id)
+            identifier=str(self.entrez_id),
         )
 
     @property
@@ -128,7 +109,7 @@ class Gene(Base):
         )
 
     def __repr__(self):  # noqa: D105
-        return '<Gene entrez_id={entrez_id} ({name})>'.format(entrez_id=self.entrez_id, name=self.name)
+        return '<Gene entrez_id={entrez_id}, name={name}>'.format(entrez_id=self.entrez_id, name=self.name)
 
     __table_args__ = (
         Index(species_id, name),  # for fast queries on a specific species' names
