@@ -155,7 +155,7 @@ class Manager(AbstractManager, BELNamespaceManagerMixin, FlaskMixin):
         if len(rv) == 1:
             return rv[0]
 
-        rv = sorted(rv, key=lambda gene: str(gene.entrez_id))
+        rv = sorted(rv, key=lambda gene: int(gene.entrez_id))
 
         log.warning('Found multiple rows for Entrez Gene named %s. Returning lowest Entrez Gene identifier of:\n%s',
                     name, '\n'.join(map(str, rv)))
