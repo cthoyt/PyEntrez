@@ -8,6 +8,7 @@ from typing import Dict, Iterable, List, Optional, Tuple
 
 import click
 import time
+from networkx import relabel_nodes
 from sqlalchemy import and_
 from tqdm import tqdm
 
@@ -18,7 +19,6 @@ from pybel import BELGraph
 from pybel.constants import FUNCTION, NAMESPACE
 from pybel.dsl import BaseEntity
 from pybel.manager.models import Namespace, NamespaceEntry
-from pybel.struct.utils import relabel_inplace
 from .constants import DEFAULT_TAX_IDS, MODULE_NAME
 from .homologene_manager import Manager as HomologeneManager
 from .models import Base, Gene, Homologene, Species, Xref
@@ -355,7 +355,7 @@ class Manager(AbstractManager, BELNamespaceManagerMixin, FlaskMixin):
             graph._node[node_tuple] = dsl
             mapping[node_tuple] = dsl.as_tuple()
 
-        relabel_inplace(graph, mapping)
+        relabel_nodes(graph, mapping, copy=False)
 
     def enrich_genes_with_homologenes(self, graph: BELGraph):
         """Enrich the nodes in a graph with their HomoloGene parents."""

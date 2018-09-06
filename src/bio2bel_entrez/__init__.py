@@ -2,6 +2,7 @@
 
 """A Bio2BEL package for Entrez Gene and HomoloGene."""
 
+from .homologene_manager import Manager as HomologeneManager  # noqa: F401
 from .manager import Manager  # noqa: F401
 
 __version__ = '0.1.2-dev'

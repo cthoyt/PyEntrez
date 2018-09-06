@@ -23,7 +23,7 @@ CLASSIFIERS = [
     'License :: OSI Approved :: MIT License',
 ]
 INSTALL_REQUIRES = [
-    'pybel>=0.11.11',
+    'pybel>=0.12.0',
     'bio2bel>=0.1.4',
     'click',
     'pandas',
