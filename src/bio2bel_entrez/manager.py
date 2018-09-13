@@ -4,10 +4,10 @@
 
 import logging
 import sys
+import time
 from typing import Dict, Iterable, List, Optional, Tuple
 
 import click
-import time
 from networkx import relabel_nodes
 from sqlalchemy import and_
 from tqdm import tqdm
