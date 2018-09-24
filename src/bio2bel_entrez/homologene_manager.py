@@ -30,19 +30,24 @@ class Manager(AbstractManager, BELNamespaceManagerMixin):
         return model.homologene_id
 
     def _create_namespace_entry_from_model(self, model: Homologene, namespace: Namespace) -> NamespaceEntry:
-        pass
+        return NamespaceEntry(
+            namespace=namespace,
+            identifier=model.homologene_id,
+            encoding='G',
+        )
 
     @property
     def _base(self):
         return Base
 
-    def is_populated(self):
+    def is_populated(self) -> bool:
         """Check if the database is populated."""
-        pass
+        return 0 < self._count_model(self.namespace_model)
 
     def populate(self, *args, **kwargs):
         """Populate the database."""
-        pass
+        raise NotImplementedError
 
     def summarize(self):
         """Summarize the database."""
+        raise NotImplementedError
