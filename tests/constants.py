@@ -5,7 +5,7 @@
 import logging
 import os
 
-from bio2bel.testing import make_temporary_cache_class_mixin
+from bio2bel.testing import AbstractTemporaryCacheMethodMixin
 from bio2bel_entrez import Manager
 
 log = logging.getLogger(__name__)
@@ -15,8 +15,11 @@ gene_info_test_path = os.path.join(dir_path, 'gene_info')
 homologene_test_path = os.path.join(dir_path, 'homologene.data')
 
 
-class PopulatedDatabaseMixin(make_temporary_cache_class_mixin(Manager)):
+class PopulatedDatabaseMixin(AbstractTemporaryCacheMethodMixin):
     """A test case with a populated database."""
+
+    Manager = Manager
+    manager = None
 
     @classmethod
     def populate(cls):
