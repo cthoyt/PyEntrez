@@ -112,7 +112,7 @@ class Gene(Base):
         return '<Gene entrez_id={entrez_id}, name={name}>'.format(entrez_id=self.entrez_id, name=self.name)
 
     __table_args__ = (
-        Index(species_id, name),  # for fast queries on a specific species' names
+        Index('species-name-index', species_id, name),  # for fast queries on a specific species' names
     )
 
 
@@ -130,6 +130,6 @@ class Xref(Base):
     value = Column(String(255), doc='Database entry name')
 
     __table_args__ = (
-        Index(gene_id, database, value),
+        Index('gene-database-value-index', gene_id, database, value),
         # UniqueConstraint(gene_id, database, value),
     )
