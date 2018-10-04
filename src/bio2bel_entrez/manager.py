@@ -75,11 +75,8 @@ class Manager(AbstractManager, BELNamespaceManagerMixin, FlaskMixin):
     def _base(self):
         return Base
 
-    def is_populated(self):
-        """Check if the database is already populated.
-
-        :rtype: bool
-        """
+    def is_populated(self) -> bool:
+        """Check if the database is already populated."""
         return 0 < self.count_genes()
 
     @staticmethod
@@ -425,13 +422,8 @@ class Manager(AbstractManager, BELNamespaceManagerMixin, FlaskMixin):
             homologenes=self.count_homologenes()
         )
 
-    def list_genes(self, limit=None, offset=None):
-        """List genes in the database.
-
-        :param Optional[int] limit:
-        :param Optional[int] offset:
-        :rtype: List[Gene]
-        """
+    def list_genes(self, limit: Optional[int] = None, offset: Optional[int] = None) -> List[Gene]:
+        """List genes in the database."""
         query = self.session.query(Gene)
         if limit:
             query = query.limit(limit)
@@ -443,11 +435,7 @@ class Manager(AbstractManager, BELNamespaceManagerMixin, FlaskMixin):
 
     @staticmethod
     def _cli_add_populate(main: click.Group) -> click.Group:
-        """Overwrite the populate method since it needs to check tax identifiers.
-
-        :type main: click.Group
-        :rtype: click.Group
-        """
+        """Overwrite the populate method since it needs to check tax identifiers."""
         return add_populate_to_cli(main)
 
 
@@ -466,7 +454,7 @@ def add_populate_to_cli(main: click.Group) -> click.Group:  # noqa: D202
         """Populate the database."""
         if all_tax_id:
             tax_id_filter = None
-        elif tax_id is None:
+        elif not tax_id:
             tax_id_filter = DEFAULT_TAX_IDS
         else:
             tax_id_filter = tax_id

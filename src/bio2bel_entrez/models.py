@@ -2,7 +2,7 @@
 
 """SQLAlchemy models for Bio2BEL Entrez."""
 
-from typing import Optional
+from typing import Mapping, Optional
 
 from sqlalchemy import Column, ForeignKey, Index, Integer, String, Text
 from sqlalchemy.ext.declarative import DeclarativeMeta, declarative_base
@@ -11,10 +11,10 @@ from sqlalchemy.orm import backref, relationship
 from pybel.dsl import CentralDogma, FUNC_TO_DSL, gene
 from .constants import MODULE_NAME
 
-GENE_TABLE_NAME = '{}_gene'.format(MODULE_NAME)
-GROUP_TABLE_NAME = '{}_homologene'.format(MODULE_NAME)
-SPECIES_TABLE_NAME = '{}_species'.format(MODULE_NAME)
-XREF_TABLE_NAME = '{}_xref'.format(MODULE_NAME)
+GENE_TABLE_NAME = f'{MODULE_NAME}_gene'
+GROUP_TABLE_NAME = f'{MODULE_NAME}_homologene'
+SPECIES_TABLE_NAME = f'{MODULE_NAME}_species'
+XREF_TABLE_NAME = f'{MODULE_NAME}_xref'
 
 Base: DeclarativeMeta = declarative_base()
 
@@ -29,7 +29,7 @@ class Species(Base):
     taxonomy_id = Column(String(32), unique=True, nullable=False, index=True, doc='NCBI Taxonomy Identifier')
 
     def __repr__(self):  # noqa: D105
-        return '<Species taxonomy_id={taxonomy_id}>'.format(taxonomy_id=self.taxonomy_id)
+        return f'<Species taxonomy_id={self.taxonomy_id}>'
 
 
 class Homologene(Base):
@@ -52,7 +52,7 @@ class Homologene(Base):
         )
 
     def __repr__(self):  # noqa: D105
-        return '<HomoloGene id={homologene_id}>'.format(homologene_id=self.homologene_id)
+        return f'<HomoloGene id={self.homologene_id}>'
 
 
 class Gene(Base):
@@ -62,7 +62,7 @@ class Gene(Base):
 
     id = Column(Integer, primary_key=True)
 
-    species_id = Column(Integer, ForeignKey('{}.id'.format(SPECIES_TABLE_NAME)), index=True)
+    species_id = Column(Integer, ForeignKey(f'{Species.__tablename__}.id'), index=True)
     species = relationship('Species', backref=backref('genes'))
 
     entrez_id = Column(String(32), nullable=False, index=True, doc='NCBI Entrez Gene Identifier')
@@ -72,7 +72,7 @@ class Gene(Base):
 
     # modification_date = Column(Date)
 
-    homologene_id = Column(Integer, ForeignKey('{}.id'.format(GROUP_TABLE_NAME)))
+    homologene_id = Column(Integer, ForeignKey(f'{Homologene.__tablename__}.id'))
     homologene = relationship(Homologene, backref=backref('genes'))
 
     def as_bel(self, func=None) -> CentralDogma:
@@ -95,11 +95,8 @@ class Gene(Base):
         """Return if this gene can be translated to a protein."""
         raise NotImplementedError
 
-    def to_json(self):
-        """Return this Gene as a JSON dictionary.
-
-        :rtype: dict
-        """
+    def to_json(self) -> Mapping[str, int]:
+        """Return this Gene as a JSON dictionary."""
         return dict(
             entrez_id=str(self.entrez_id),
             name=str(self.name),
@@ -109,7 +106,7 @@ class Gene(Base):
         )
 
     def __repr__(self):  # noqa: D105
-        return '<Gene entrez_id={entrez_id}, name={name}>'.format(entrez_id=self.entrez_id, name=self.name)
+        return f'<Gene entrez_id={self.entrez_id}, name={self.name}>'
 
     __table_args__ = (
         Index('species-name-index', species_id, name),  # for fast queries on a specific species' names
@@ -123,7 +120,7 @@ class Xref(Base):
 
     id = Column(Integer, primary_key=True)
 
-    gene_id = Column(Integer, ForeignKey('{}.id'.format(GENE_TABLE_NAME)), index=True)
+    gene_id = Column(Integer, ForeignKey(f'{Gene.__tablename__}.id'), index=True)
     gene = relationship(Gene, backref=backref('xrefs'))
 
     database = Column(String(64), doc='Database name', index=True)
