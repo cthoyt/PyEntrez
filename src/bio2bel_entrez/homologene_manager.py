@@ -35,6 +35,7 @@ class Manager(AbstractManager, BELNamespaceManagerMixin):
     def _create_namespace_entry_from_model(self, model: Homologene, namespace: Namespace) -> NamespaceEntry:
         return NamespaceEntry(
             namespace=namespace,
+            name=model.homologene_id,
             identifier=model.homologene_id,
             encoding=model.bel_encoding,
         )

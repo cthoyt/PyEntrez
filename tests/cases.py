@@ -2,12 +2,12 @@
 
 """Test cases for Bio2BEL Entrez."""
 
-from bio2bel.testing import AbstractTemporaryCacheMethodMixin
+from bio2bel.testing import AbstractTemporaryCacheClassMixin
 from bio2bel_entrez import Manager
 from tests.constants import TEST_GENE_INFO_PATH, TEST_HOMOLOGENE_PATH
 
 
-class PopulatedDatabaseMixin(AbstractTemporaryCacheMethodMixin):
+class PopulatedDatabaseMixin(AbstractTemporaryCacheClassMixin):
     """A test case with a populated database."""
 
     Manager = Manager
