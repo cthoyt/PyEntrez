@@ -58,7 +58,7 @@ class Manager(AbstractManager, BELNamespaceManagerMixin, FlaskMixin):
 
     namespace_model = Gene
     identifiers_recommended = 'NCBI Gene'
-    identifiers_pattern = '^\d+$'
+    identifiers_pattern = r'^\d+$'
     identifiers_miriam = 'MIR:00000069'
     identifiers_namespace = 'ncbigene'
     identifiers_url = 'http://identifiers.org/ncbigene/'

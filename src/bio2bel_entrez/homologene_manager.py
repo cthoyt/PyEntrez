@@ -23,7 +23,7 @@ class Manager(AbstractManager, BELNamespaceManagerMixin):
     namespace_model = Homologene
     has_names = False
     identifiers_recommended = 'HomoloGene'
-    identifiers_pattern = '^\d+$'
+    identifiers_pattern = r'^\d+$'
     identifiers_miriam = 'MIR:00000275'
     identifiers_namespace = 'homologene'
     identifiers_url = 'http://identifiers.org/homologene/'
