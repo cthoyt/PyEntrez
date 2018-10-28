@@ -2,29 +2,13 @@
 
 """Constants for testing Bio2BEL Entrez."""
 
-import logging
 import os
 
-from bio2bel.testing import AbstractTemporaryCacheMethodMixin
-from bio2bel_entrez import Manager
+__all__ = [
+    'TEST_GENE_INFO_PATH',
+    'TEST_HOMOLOGENE_PATH',
+]
 
-log = logging.getLogger(__name__)
-
-dir_path = os.path.dirname(os.path.realpath(__file__))
-gene_info_test_path = os.path.join(dir_path, 'gene_info')
-homologene_test_path = os.path.join(dir_path, 'homologene.data')
-
-
-class PopulatedDatabaseMixin(AbstractTemporaryCacheMethodMixin):
-    """A test case with a populated database."""
-
-    Manager = Manager
-    manager = None
-
-    @classmethod
-    def populate(cls):
-        """Populate the database with Entrez."""
-        cls.manager.populate(
-            gene_info_url=gene_info_test_path,
-            homologene_url=homologene_test_path
-        )
+HERE = os.path.dirname(os.path.realpath(__file__))
+TEST_GENE_INFO_PATH = os.path.join(HERE, 'gene_info')
+TEST_HOMOLOGENE_PATH = os.path.join(HERE, 'homologene.data')

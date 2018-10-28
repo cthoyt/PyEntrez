@@ -4,11 +4,10 @@
 
 from itertools import chain
 
-from bio2bel_entrez.constants import MODULE_NAME
-from bio2bel_entrez.manager import VALID_ENTREZ_NAMESPACES
+from bio2bel_entrez.constants import MODULE_NAME, VALID_ENTREZ_NAMESPACES
 from pybel import BELGraph
 from pybel.dsl import gene
-from tests.constants import PopulatedDatabaseMixin
+from tests.cases import PopulatedDatabaseMixin
 
 rgd_gene_symbol = 'Mapk1'
 rgd_node = gene(namespace='RGD', name=rgd_gene_symbol)
@@ -57,9 +56,9 @@ class TestOrthologs(PopulatedDatabaseMixin):
 
         self.manager.enrich_equivalences(graph)
 
-        self.assertIn(human_entrez_node.as_tuple(), graph)
-        self.assertIn(human_entrez_node.as_tuple(), graph[hgnc_node.as_tuple()])
-        self.assertIn(hgnc_node.as_tuple(), graph[human_entrez_node.as_tuple()])
+        self.assertIn(human_entrez_node, graph)
+        self.assertIn(human_entrez_node, graph[hgnc_node])
+        self.assertIn(hgnc_node, graph[human_entrez_node])
 
     def test_enrich_equivalencies_rgd(self):
         """Test adding equivalences to an RGD node."""
@@ -71,9 +70,9 @@ class TestOrthologs(PopulatedDatabaseMixin):
 
         self.manager.enrich_equivalences(graph)
 
-        self.assertIn(rat_entrez_node.as_tuple(), graph)
-        self.assertIn(rat_entrez_node.as_tuple(), graph[rgd_node.as_tuple()])
-        self.assertIn(rgd_node.as_tuple(), graph[rat_entrez_node.as_tuple()])
+        self.assertIn(rat_entrez_node, graph)
+        self.assertIn(rat_entrez_node, graph[rgd_node])
+        self.assertIn(rgd_node, graph[rat_entrez_node])
 
     def help_test_enrich_orthologs_on_rgd(self, graph, rat_node):
         """Help test enriching orthologs on an RGD node."""
@@ -85,8 +84,8 @@ class TestOrthologs(PopulatedDatabaseMixin):
         self.assertLess(1, graph.number_of_nodes())
         self.assertLess(0, graph.number_of_edges())
 
-        self.assertIn(human_entrez_node.as_tuple(), graph, msg='Missing human node. Graph has: {}'.format(list(graph)))
-        self.assertIn(rat_node.as_tuple(), graph[human_entrez_node.as_tuple()])
+        self.assertIn(human_entrez_node, graph, msg='Missing human node. Graph has: {}'.format(list(graph)))
+        self.assertIn(rat_node, graph[human_entrez_node])
 
     def test_enrich_orthologs_on_rgd_symbol(self):
         """Test enriching a graph that contains an RGD node identified by Entrez."""
@@ -114,8 +113,8 @@ class TestOrthologs(PopulatedDatabaseMixin):
         self.assertLess(1, graph.number_of_nodes())
         self.assertLess(0, graph.number_of_edges())
 
-        self.assertIn(rat_entrez_node.as_tuple(), graph)
-        self.assertIn(rat_entrez_node.as_tuple(), graph[human_node.as_tuple()])
+        self.assertIn(rat_entrez_node, graph)
+        self.assertIn(rat_entrez_node, graph[human_node])
 
     def test_enrich_orthologs_on_entrez(self):
         """Test enriching a graph that contains an HGNC node identified by Entrez."""
