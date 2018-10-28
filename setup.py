@@ -34,14 +34,19 @@ INSTALL_REQUIRES = [
     'tqdm',
 ]
 EXTRAS_REQUIRE = {
-    'web': ['flask', 'flask_admin'],
+    'web': [
+        'flask',
+        'flask_admin',
+    ],
 }
 ENTRY_POINTS = {
     'bio2bel': [
         'entrez = bio2bel_entrez',
+        'homologene = bio2bel_entrez.homologene_manager',
     ],
     'console_scripts': [
         'bio2bel_entrez = bio2bel_entrez.cli:main',
+        'bio2bel_homologene = bio2bel_entrez.homologene_manager:main',
     ]
 }
 
@@ -93,4 +98,5 @@ if __name__ == '__main__':
         install_requires=INSTALL_REQUIRES,
         extras_require=EXTRAS_REQUIRE,
         entry_points=ENTRY_POINTS,
+        zip_safe=False,
     )
