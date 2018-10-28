@@ -19,35 +19,16 @@ from pybel import BELGraph
 from pybel.constants import FUNCTION, NAMESPACE
 from pybel.dsl import BaseEntity
 from pybel.manager.models import Namespace, NamespaceEntry
-from .constants import DEFAULT_TAX_IDS, MODULE_NAME
+from .constants import DEFAULT_TAX_IDS, MODULE_NAME, VALID_ENTREZ_NAMESPACES, VALID_MGI_NAMESPACES
 from .homologene_manager import Manager as HomologeneManager
 from .models import Base, Gene, Homologene, Species, Xref
 from .parser import get_entrez_df, get_homologene_df
 
 __all__ = [
-    'SPECIES_CONSORTIUM_MAPPING',
-    'CONSORTIUM_SPECIES_MAPPING',
     'Manager',
 ]
 
 log = logging.getLogger(__name__)
-
-SPECIES_CONSORTIUM_MAPPING = {
-    '10090': 'MGI',
-    '10116': 'RGD',
-    '4932': 'SGD',
-    '7227': 'FLYBASE',
-    '9606': 'HGNC',
-}
-
-#: All namepace codes (in lowercase) that can map to ncbigene
-VALID_ENTREZ_NAMESPACES = {'egid', 'eg', 'entrez', 'ncbigene'}
-VALID_MGI_NAMESPACES = {'mgi', 'mgd'}
-
-CONSORTIUM_SPECIES_MAPPING = {
-    database_code: taxonomy_id
-    for taxonomy_id, database_code in SPECIES_CONSORTIUM_MAPPING.items()
-}
 
 
 class Manager(AbstractManager, BELNamespaceManagerMixin, FlaskMixin):
@@ -117,7 +98,7 @@ class Manager(AbstractManager, BELNamespaceManagerMixin, FlaskMixin):
         """
         return self.session.query(Gene).filter(Gene.entrez_id == entrez_id).one_or_none()
 
-    def get_genes_by_name(self, name) -> List[Gene]:
+    def get_genes_by_name(self, name: str) -> List[Gene]:
         """Get a list of genes with the given name (case insensitive).
 
         :param name: A gene name
@@ -132,7 +113,7 @@ class Manager(AbstractManager, BELNamespaceManagerMixin, FlaskMixin):
         rgd_name_filter = and_(Species.taxonomy_id == '10116', Gene.name == name)
         return self.session.query(Gene).join(Species).filter(rgd_name_filter).one_or_none()
 
-    def get_gene_by_mgi_name(self, name) -> Optional[Gene]:
+    def get_gene_by_mgi_name(self, name: str) -> Optional[Gene]:
         """Get a gene by its MGI name.
 
         :param name: MGI gene symbol

@@ -42,3 +42,19 @@ DEFAULT_TAX_IDS = (
     '7227',  # Drosophila
     '4932',  # Yeast
 )
+SPECIES_CONSORTIUM_MAPPING = {
+    '10090': 'MGI',
+    '10116': 'RGD',
+    '4932': 'SGD',
+    '7227': 'FLYBASE',
+    '9606': 'HGNC',
+}
+
+#: All namepace codes (in lowercase) that can map to ncbigene
+CONSORTIUM_SPECIES_MAPPING = {
+    database_code: taxonomy_id
+    for taxonomy_id, database_code in SPECIES_CONSORTIUM_MAPPING.items()
+}
+
+VALID_ENTREZ_NAMESPACES = {'egid', 'eg', 'entrez', 'ncbigene'}
+VALID_MGI_NAMESPACES = {'mgi', 'mgd'}
