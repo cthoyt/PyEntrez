@@ -10,15 +10,18 @@ from .models import Base, Homologene
 
 __all__ = [
     'Manager',
+    'main',
 ]
 
 
 class Manager(AbstractManager, BELNamespaceManagerMixin):
     """Manages the HomoloGene database."""
 
+    _base = Base
     module_name = MODULE_NAME
-    namespace_model = Homologene
 
+    namespace_model = Homologene
+    has_names = False
     identifiers_recommended = 'HomoloGene'
     identifiers_pattern = '^\d+$'
     identifiers_miriam = 'MIR:00000275'
@@ -33,12 +36,8 @@ class Manager(AbstractManager, BELNamespaceManagerMixin):
         return NamespaceEntry(
             namespace=namespace,
             identifier=model.homologene_id,
-            encoding='G',
+            encoding=model.bel_encoding,
         )
-
-    @property
-    def _base(self):
-        return Base
 
     def is_populated(self) -> bool:
         """Check if the database is populated."""
@@ -51,3 +50,6 @@ class Manager(AbstractManager, BELNamespaceManagerMixin):
     def summarize(self):
         """Summarize the database."""
         raise NotImplementedError
+
+
+main = Manager.get_cli()

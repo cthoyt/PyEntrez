@@ -55,8 +55,8 @@ class Manager(AbstractManager, BELNamespaceManagerMixin, FlaskMixin):
 
     module_name = MODULE_NAME
     flask_admin_models = [Gene, Homologene, Species, Xref]
-    namespace_model = Gene
 
+    namespace_model = Gene
     identifiers_recommended = 'NCBI Gene'
     identifiers_pattern = '^\d+$'
     identifiers_miriam = 'MIR:00000069'
@@ -80,14 +80,14 @@ class Manager(AbstractManager, BELNamespaceManagerMixin, FlaskMixin):
         return 0 < self.count_genes()
 
     @staticmethod
-    def _get_identifier(model) -> str:
-        return model.entrez_id
+    def _get_identifier(gene: Gene) -> str:
+        return gene.entrez_id
 
-    def _create_namespace_entry_from_model(self, model: Gene, namespace: Namespace) -> NamespaceEntry:
+    def _create_namespace_entry_from_model(self, gene: Gene, namespace: Namespace) -> NamespaceEntry:
         return NamespaceEntry(
-            encoding='G',
-            name=model.name,
-            identifier=model.entrez_id,
+            encoding=gene.bel_encoding,
+            name=gene.name,
+            identifier=gene.entrez_id,
             namespace=namespace,
         )
 

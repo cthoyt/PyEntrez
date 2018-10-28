@@ -23,7 +23,6 @@ class Species(Base):
     """Represents a Species."""
 
     __tablename__ = SPECIES_TABLE_NAME
-
     id = Column(Integer, primary_key=True)
 
     taxonomy_id = Column(String(32), unique=True, nullable=False, index=True, doc='NCBI Taxonomy Identifier')
@@ -36,10 +35,11 @@ class Homologene(Base):
     """Represents a HomoloGene Group."""
 
     __tablename__ = GROUP_TABLE_NAME
-
     id = Column(Integer, primary_key=True)
 
     homologene_id = Column(String(255), index=True, unique=True, nullable=False)
+
+    bel_encoding = 'GRP'
 
     def as_bel(self, func: Optional[str] = None) -> CentralDogma:
         """Make a PyBEL DSL object from this HomoloGene."""
@@ -48,7 +48,7 @@ class Homologene(Base):
         return dsl(
             namespace='homologene',
             name=str(self.homologene_id),
-            identifier=str(self.homologene_id)
+            identifier=str(self.homologene_id),
         )
 
     def __repr__(self):  # noqa: D105
@@ -74,6 +74,8 @@ class Gene(Base):
 
     homologene_id = Column(Integer, ForeignKey(f'{Homologene.__tablename__}.id'))
     homologene = relationship(Homologene, backref=backref('genes'))
+
+    bel_encoding = 'GRP'
 
     def as_bel(self, func=None) -> CentralDogma:
         """Make a PyBEL DSL object from this gene."""
