@@ -22,7 +22,7 @@ from pybel.manager.models import Namespace, NamespaceEntry
 from .constants import DEFAULT_TAX_IDS, MODULE_NAME, VALID_ENTREZ_NAMESPACES, VALID_MGI_NAMESPACES
 from .homologene_manager import Manager as HomologeneManager
 from .models import Base, Gene, Homologene, Species, Xref
-from .parser import get_entrez_df, get_homologene_df
+from .parser import get_gene_info_df, get_homologene_df
 
 __all__ = [
     'Manager',
@@ -210,16 +210,21 @@ class Manager(AbstractManager, BELNamespaceManagerMixin, FlaskMixin):
         self.session.commit()
         log.info('committed HomoloGene models in %.2f seconds', time.time() - t)
 
-    def populate_gene_info(self, url=None, cache=True, force_download=False, interval=None, tax_id_filter=None):
+    def populate_gene_info(self,
+                           url: Optional[str] = None,
+                           cache: bool = True,
+                           force_download: bool = False,
+                           interval: Optional[int] = None,
+                           tax_id_filter: Iterable[str] = None):
         """Populate the database.
 
-        :param Optional[str] url: A custom url to download
-        :param Optional[int] interval: The number of records to commit at a time
-        :param bool cache: If true, the data is downloaded to the file system, else it is loaded from the internet
-        :param bool force_download: If true, overwrites a previously cached file
-        :param Optional[iter[str]] tax_id_filter: Species to keep
+        :param url: A custom url to download
+        :param interval: The number of records to commit at a time
+        :param cache: If true, the data is downloaded to the file system, else it is loaded from the internet
+        :param force_download: If true, overwrites a previously cached file
+        :param tax_id_filter: Species to keep
         """
-        df = get_entrez_df(url=url, cache=cache, force_download=force_download)
+        df = get_gene_info_df(url=url, cache=cache, force_download=force_download)
 
         if tax_id_filter is not None:
             tax_id_filter = set(tax_id_filter)
@@ -262,14 +267,18 @@ class Manager(AbstractManager, BELNamespaceManagerMixin, FlaskMixin):
         log.info('committing Entrez Gene models')
         self.session.commit()
 
-    def populate(self, gene_info_url=None, interval=None, tax_id_filter=DEFAULT_TAX_IDS, homologene_url=None):
+    def populate(self,
+                 gene_info_url: Optional[str] = None,
+                 interval: Optional[int] = None,
+                 tax_id_filter: Iterable[str] = DEFAULT_TAX_IDS,
+                 homologene_url: Optional[str] = None):
         """Populate the database.
 
-        :param Optional[str] gene_info_url: A custom url to download
-        :param Optional[int] interval: The number of records to commit at a time
-        :param Optional[iter[str]] tax_id_filter: Species to keep. Defaults to 9606 (human), 10090 (mouse), 10116
+        :param gene_info_url: A custom url to download
+        :param interval: The number of records to commit at a time
+        :param tax_id_filter: Species to keep. Defaults to 9606 (human), 10090 (mouse), 10116
          (rat), 7227 (fly), and 4932 (yeast). Explicitly set to None to get all taxonomies.
-        :param Optional[str] homologene_url: A custom url to download
+        :param homologene_url: A custom url to download
         """
         self.populate_homologene(url=homologene_url, tax_id_filter=tax_id_filter)
         self.populate_gene_info(url=gene_info_url, interval=interval, tax_id_filter=tax_id_filter)
