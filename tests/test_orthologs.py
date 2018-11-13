@@ -54,9 +54,13 @@ class TestOrthologs(PopulatedDatabaseMixin):
         self.assertEqual(1, graph.number_of_nodes())
         self.assertEqual(0, graph.number_of_edges())
 
+        # test iterating over the genes
+        genes = list(self.manager.iter_genes(graph))
+        self.assertEqual(1, len(genes), msg='missing genes')
+
         self.manager.enrich_equivalences(graph)
 
-        self.assertIn(human_entrez_node, graph)
+        self.assertIn(human_entrez_node, graph, msg=f'missing human entrez node. Has: {graph.nodes()}')
         self.assertIn(human_entrez_node, graph[hgnc_node])
         self.assertIn(hgnc_node, graph[human_entrez_node])
 
@@ -84,7 +88,7 @@ class TestOrthologs(PopulatedDatabaseMixin):
         self.assertLess(1, graph.number_of_nodes())
         self.assertLess(0, graph.number_of_edges())
 
-        self.assertIn(human_entrez_node, graph, msg='Missing human node. Graph has: {}'.format(list(graph)))
+        self.assertIn(human_entrez_node, graph, msg=f'Missing human node. Graph has: {graph.nodes()}')
         self.assertIn(rat_node, graph[human_entrez_node])
 
     def test_enrich_orthologs_on_rgd_symbol(self):
