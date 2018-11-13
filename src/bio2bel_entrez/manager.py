@@ -326,13 +326,12 @@ class Manager(AbstractManager, BELNamespaceManagerMixin, FlaskMixin):
 
     def iter_genes(self, graph: BELGraph) -> Iterable[Tuple[BaseEntity, Gene]]:
         """Iterate over genes in the graph that can be mapped to an Entrez gene."""
-        for _, node in graph.nodes(data=True):
+        for node in graph:
             gene_model = self.lookup_node(node)
-
             if gene_model is not None:
                 yield node, gene_model
 
-    def normalize_genes(self, graph: BELGraph):
+    def normalize_genes(self, graph: BELGraph) -> None:
         """Add identifiers to all Entrez genes."""
         mapping = {}
 
@@ -344,7 +343,7 @@ class Manager(AbstractManager, BELNamespaceManagerMixin, FlaskMixin):
 
         relabel_nodes(graph, mapping, copy=False)
 
-    def enrich_genes_with_homologenes(self, graph: BELGraph):
+    def enrich_genes_with_homologenes(self, graph: BELGraph) -> None:
         """Enrich the nodes in a graph with their HomoloGene parents."""
         self.add_namespace_to_graph(graph)
         self.add_homologene_namespace_to_graph(graph)
@@ -355,14 +354,14 @@ class Manager(AbstractManager, BELNamespaceManagerMixin, FlaskMixin):
                 continue
             graph.add_is_a(node_data, homologene.as_bel(node_data[FUNCTION]))
 
-    def enrich_equivalences(self, graph: BELGraph):
+    def enrich_equivalences(self, graph: BELGraph) -> None:
         """Add equivalent node information."""
         self.add_namespace_to_graph(graph)
 
         for node, gene_model in list(self.iter_genes(graph)):
             graph.add_equivalence(node, gene_model.as_bel(node[FUNCTION]))
 
-    def enrich_orthologies(self, graph: BELGraph):
+    def enrich_orthologies(self, graph: BELGraph) -> None:
         """Add ortholog relationships to graph."""
         self.add_namespace_to_graph(graph)
         self.add_homologene_namespace_to_graph(graph)
@@ -373,10 +372,8 @@ class Manager(AbstractManager, BELNamespaceManagerMixin, FlaskMixin):
 
             for ortholog in gene_model.homologene.genes:
                 ortholog_node = ortholog.as_bel(node[FUNCTION])
-
-                if ortholog_node.as_tuple() == node.as_tuple():
+                if ortholog_node == node:
                     continue
-
                 graph.add_orthology(node, ortholog_node)
 
     def add_homologene_namespace_to_graph(self, graph: BELGraph) -> Namespace:

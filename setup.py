@@ -18,25 +18,33 @@ CLASSIFIERS = [
     'Intended Audience :: Science/Research',
     'Operating System :: OS Independent',
     'Programming Language :: Python',
+    'Programming Language :: Python :: 3 :: Only',
     'Programming Language :: Python :: 3.6',
+    'Programming Language :: Python :: 3.7',
     'Topic :: Scientific/Engineering :: Bio-Informatics',
     'License :: OSI Approved :: MIT License',
 ]
 INSTALL_REQUIRES = [
-    'pybel>=0.12.0',
-    'bio2bel>=0.1.4',
+    'pybel>=0.12.0,<0.13.0',
+    'bio2bel>=0.2.0,<0.3.0',
     'click',
     'pandas',
     'sqlalchemy',
     'six',
-    'flask',
-    'flask-admin',
     'tqdm',
 ]
 EXTRAS_REQUIRE = {
     'web': [
         'flask',
         'flask_admin',
+    ],
+    'docs': [
+        'flask',
+        'flask_admin',
+        'sphinx',
+        'sphinx-rtd-theme',
+        'sphinx-click',
+        'sphinx-autodoc-typehints',
     ],
 }
 ENTRY_POINTS = {
