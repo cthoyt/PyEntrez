@@ -24,6 +24,7 @@ CLASSIFIERS = [
     'Topic :: Scientific/Engineering :: Bio-Informatics',
     'License :: OSI Approved :: MIT License',
 ]
+KEYWORDS = ['Genes', 'Bioinformatics']
 INSTALL_REQUIRES = [
     'pybel>=0.12.0,<0.13.0',
     'bio2bel>=0.2.0,<0.3.0',
@@ -101,6 +102,7 @@ if __name__ == '__main__':
         maintainer_email=find_meta('email'),
         license=find_meta('license'),
         classifiers=CLASSIFIERS,
+        keywords=KEYWORDS,
         packages=PACKAGES,
         package_dir={'': 'src'},
         install_requires=INSTALL_REQUIRES,
