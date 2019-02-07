@@ -4,7 +4,7 @@
 
 from bio2bel.testing import AbstractTemporaryCacheClassMixin
 from bio2bel_entrez import Manager
-from tests.constants import TEST_GENE_INFO_PATH, TEST_HOMOLOGENE_PATH
+from tests.constants import TEST_GENE_INFO_PATH, TEST_HOMOLOGENE_PATH, TEST_REFSEQ_PATH
 
 
 class PopulatedDatabaseMixin(AbstractTemporaryCacheClassMixin):
@@ -17,5 +17,6 @@ class PopulatedDatabaseMixin(AbstractTemporaryCacheClassMixin):
         """Populate the database with Entrez."""
         cls.manager.populate(
             gene_info_url=TEST_GENE_INFO_PATH,
+            refseq_url=TEST_REFSEQ_PATH,
             homologene_url=TEST_HOMOLOGENE_PATH,
         )

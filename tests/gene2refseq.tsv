@@ -1,0 +1,4 @@
+#tax_id	GeneID	status	RNA_nucleotide_accession.version	RNA_nucleotide_gi	protein_accession.version	protein_gi	genomic_nucleotide_accession.version	genomic_nucleotide_gi	start_position_on_the_genomic_accession	end_position_on_the_genomic_accession	orientation	assembly	mature_peptide_accession.version	mature_peptide_gi	Symbol
+7227	3354888	REVIEWED	NM_001015121.3	442634404	NP_001015121.3	442634405	NT_033778.4	671162315	1071461	1125926	+	-	-	-	rl
+9606	5594	REVIEWED	NM_002745.4	75709178	NP_002736.3	66932916	NC_000022.11	568815576	21759656	21867679	-	Reference GRCh38.p12 Primary Assembly	-	-	MAPK1
+10116	116590	VALIDATED	NM_053842.2	828747829	NP_446294.1	16758698	AC_000079.1	109649549	82713469	82779259	-	Alternate Rn_Celera	-	-	Mapk1

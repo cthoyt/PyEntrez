@@ -5,6 +5,7 @@
 from itertools import chain
 
 from bio2bel_entrez.constants import MODULE_NAME, VALID_ENTREZ_NAMESPACES
+from bio2bel_entrez.models import Gene
 from pybel import BELGraph
 from pybel.dsl import gene
 from tests.cases import PopulatedDatabaseMixin
@@ -36,15 +37,17 @@ class TestOrthologs(PopulatedDatabaseMixin):
 
     def test_get_rgd(self):
         """Test getting a gene by RGD gene symbol."""
-        node = self.manager.get_gene_by_rgd_name(rgd_gene_symbol)
-        self.assertIsNotNone(node)
-        self.assertEqual('116590', node.entrez_id)
+        gene: Gene = self.manager.get_gene_by_rgd_name(rgd_gene_symbol)
+        self.assertIsNotNone(gene)
+        self.assertEqual('116590', gene.entrez_id)
+        self.assertEqual('82713469', gene.start_position)
+        self.assertEqual('82779259', gene.end_position)
 
     def test_get_hgnc(self):
         """Test getting a gene by HGNC gene symbol."""
-        node = self.manager.get_gene_by_hgnc_name(hgnc_gene_symbol)
-        self.assertIsNotNone(node)
-        self.assertEqual('5594', node.entrez_id)
+        gene = self.manager.get_gene_by_hgnc_name(hgnc_gene_symbol)
+        self.assertIsNotNone(gene)
+        self.assertEqual('5594', gene.entrez_id)
 
     def test_enrich_equivalencies_hgnc(self):
         """Test adding equivalences to an HGNC node."""

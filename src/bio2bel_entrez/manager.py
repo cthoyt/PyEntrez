@@ -22,7 +22,7 @@ from pybel.manager.models import Namespace, NamespaceEntry
 from .constants import DEFAULT_TAX_IDS, MODULE_NAME, VALID_ENTREZ_NAMESPACES, VALID_MGI_NAMESPACES
 from .homologene_manager import Manager as HomologeneManager
 from .models import Base, Gene, Homologene, Species, Xref
-from .parser import get_gene_info_df, get_homologene_df
+from .parser import get_gene_info_df, get_gene_positions, get_homologene_df
 
 __all__ = [
     'Manager',
@@ -190,7 +190,7 @@ class Manager(AbstractManager, BELNamespaceManagerMixin, FlaskMixin):
 
         if tax_id_filter is not None:
             tax_id_filter = set(tax_id_filter)
-            log.info('filtering HomoloGene to %s', tax_id_filter)
+            log.info(f'filtering HomoloGene to {", ".join(tax_id_filter)}')
             df = df[df['tax_id'].isin(tax_id_filter)]
 
         log.info('preparing HomoloGene models')
@@ -211,32 +211,38 @@ class Manager(AbstractManager, BELNamespaceManagerMixin, FlaskMixin):
         log.info('committed HomoloGene models in %.2f seconds', time.time() - t)
 
     def populate_gene_info(self,
-                           url: Optional[str] = None,
+                           gene_info_url: Optional[str] = None,
+                           refseq_url: Optional[str] = None,
                            cache: bool = True,
                            force_download: bool = False,
                            interval: Optional[int] = None,
-                           tax_id_filter: Iterable[str] = None):
+                           tax_ids: Iterable[str] = None):
         """Populate the database.
 
-        :param url: A custom url to download
+        :param gene_info_url: A custom url to download
+        :param refseq_url: A custom url to download
         :param interval: The number of records to commit at a time
         :param cache: If true, the data is downloaded to the file system, else it is loaded from the internet
         :param force_download: If true, overwrites a previously cached file
-        :param tax_id_filter: Species to keep
+        :param tax_ids: Species to keep
         """
-        df = get_gene_info_df(url=url, cache=cache, force_download=force_download)
+        gene_info_df = get_gene_info_df(url=gene_info_url, cache=cache, force_download=force_download)
 
-        if tax_id_filter is not None:
-            tax_id_filter = set(tax_id_filter)
-            log.info('filtering Entrez Gene to %s', tax_id_filter)
-            df = df[df['#tax_id'].isin(tax_id_filter)]
+        if tax_ids is not None:
+            tax_ids = set(tax_ids)
+            log.info(f'filtering Entrez Gene to {", ".join(tax_ids)}')
+            gene_info_df = gene_info_df[gene_info_df['#tax_id'].isin(tax_ids)]
+
+        print('starting to gene positions')
+        refseq_dict = get_gene_positions(url=refseq_url, tax_ids=tax_ids)
+        print('got gene positions:', {k: v for _, (k, v) in zip(range(5, refseq_dict.items()))})
 
         log.info('preparing Entrez Gene models')
-        for taxonomy_id, sub_df in tqdm(df.groupby('#tax_id'), desc='Species'):
+        for taxonomy_id, sub_df in tqdm(gene_info_df.groupby('#tax_id'), desc='Species'):
             taxonomy_id = str(int(taxonomy_id))
             species = self.get_or_create_species(taxonomy_id=taxonomy_id)
 
-            species_it = tqdm(sub_df.itertuples(), desc='Tax ID {}'.format(taxonomy_id), total=len(sub_df.index),
+            species_it = tqdm(sub_df.itertuples(), desc=f'Tax ID {taxonomy_id}', total=len(sub_df.index),
                               leave=False)
             for idx, _, entrez_id, name, xrefs, description, type_of_gene in species_it:
                 entrez_id = str(int(entrez_id))
@@ -246,14 +252,22 @@ class Manager(AbstractManager, BELNamespaceManagerMixin, FlaskMixin):
                     # These errors are due to placeholder entries for GeneRIFs and only occur once per species
                     continue
 
+                print(f'getting positions for {entrez_id}, {type(entrez_id)}')
+                start_position, end_position = refseq_dict.get(entrez_id, (None, None))
+                print(f'positions for {entrez_id}: {start_position}/{end_position}')
+
                 gene = Gene(
                     entrez_id=entrez_id,
                     species=species,
                     name=name,
                     description=description,
                     type_of_gene=type_of_gene,
-                    homologene=self.gene_homologene.get(entrez_id)
+                    homologene=self.gene_homologene.get(entrez_id),
+                    start_position=start_position,
+                    end_position=end_position,
                 )
+
+                print(f'made gene {entrez_id}')
                 self.session.add(gene)
 
                 if not isinstance(xrefs, float):
@@ -269,19 +283,27 @@ class Manager(AbstractManager, BELNamespaceManagerMixin, FlaskMixin):
 
     def populate(self,
                  gene_info_url: Optional[str] = None,
+                 refseq_url: Optional[str] = None,
                  interval: Optional[int] = None,
                  tax_id_filter: Iterable[str] = DEFAULT_TAX_IDS,
-                 homologene_url: Optional[str] = None):
+                 homologene_url: Optional[str] = None,
+                 ) -> None:
         """Populate the database.
 
         :param gene_info_url: A custom url to download
+        :param refseq_url: A custom url to download
         :param interval: The number of records to commit at a time
         :param tax_id_filter: Species to keep. Defaults to 9606 (human), 10090 (mouse), 10116
          (rat), 7227 (fly), and 4932 (yeast). Explicitly set to None to get all taxonomies.
         :param homologene_url: A custom url to download
         """
         self.populate_homologene(url=homologene_url, tax_id_filter=tax_id_filter)
-        self.populate_gene_info(url=gene_info_url, interval=interval, tax_id_filter=tax_id_filter)
+        self.populate_gene_info(
+            gene_info_url=gene_info_url,
+            refseq_url=refseq_url,
+            interval=interval,
+            tax_ids=tax_id_filter,
+        )
 
     def _handle_entrez_node(self, identifier=None, name=None):
         if identifier:
@@ -434,7 +456,7 @@ def add_populate_to_cli(main: click.Group) -> click.Group:  # noqa: D202
     @click.option('--force', is_flag=True, help='Force overwrite if already populated')
     @click.option('-t', '--tax-id', multiple=True,
                   help='Keep this taxonomy identifier. Can specify multiple. Defaults to 9606 (human), 10090 (mouse), '
-                       '10116 (rat), 7227 (fly), and 4932 (yeast).')
+                       '10116 (rat), 7227 (fly), 4932 (yeast), 7955 (zebrafish), and 6239 (C. elegans).')
     @click.option('-a', '--all-tax-id', is_flag=True, help='Use all taxonomy identifiers')
     @click.pass_obj
     def populate(manager, reset, force, tax_id, all_tax_id):

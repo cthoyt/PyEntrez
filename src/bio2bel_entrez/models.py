@@ -70,6 +70,9 @@ class Gene(Base):
     description = Column(Text, doc='Gene Description')
     type_of_gene = Column(String(32), doc='Type of Gene')
 
+    start_position = Column(Integer)
+    end_position = Column(Integer)
+
     # modification_date = Column(Date)
 
     homologene_id = Column(Integer, ForeignKey(f'{Homologene.__tablename__}.id'))
@@ -97,7 +100,7 @@ class Gene(Base):
         """Return if this gene can be translated to a protein."""
         raise NotImplementedError
 
-    def to_json(self) -> Mapping[str, int]:
+    def to_json(self) -> Mapping[str, str]:
         """Return this Gene as a JSON dictionary."""
         return dict(
             entrez_id=str(self.entrez_id),
@@ -108,7 +111,7 @@ class Gene(Base):
         )
 
     def __repr__(self):  # noqa: D105
-        return f'<Gene entrez_id={self.entrez_id}, name={self.name}>'
+        return f'<Gene ncbigene:{self.entrez_id}, name={self.name}>'
 
     __table_args__ = (
         Index('species-name-index', species_id, name),  # for fast queries on a specific species' names
