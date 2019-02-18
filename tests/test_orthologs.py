@@ -4,11 +4,13 @@
 
 from itertools import chain
 
+from bio2bel.testing import AbstractTemporaryCacheClassMixin
+from bio2bel_entrez import Manager
 from bio2bel_entrez.constants import MODULE_NAME, VALID_ENTREZ_NAMESPACES
 from bio2bel_entrez.models import Gene
 from pybel import BELGraph
 from pybel.dsl import gene
-from tests.cases import PopulatedDatabaseMixin
+from tests.constants import TEST_GENE_INFO_PATH, TEST_HOMOLOGENE_PATH, TEST_REFSEQ_PATH
 
 rgd_gene_symbol = 'Mapk1'
 rgd_node = gene(namespace='RGD', name=rgd_gene_symbol)
@@ -26,8 +28,19 @@ entrez_namespaces = list(chain(
 ))
 
 
-class TestOrthologs(PopulatedDatabaseMixin):
-    """Test loading of orthologs."""
+class TestOrthologs(AbstractTemporaryCacheClassMixin):
+    """A test case with a populated database."""
+
+    Manager = Manager
+
+    @classmethod
+    def populate(cls):
+        """Populate the database with Entrez."""
+        cls.manager.populate(
+            gene_info_url=TEST_GENE_INFO_PATH,
+            refseq_url=TEST_REFSEQ_PATH,
+            homologene_url=TEST_HOMOLOGENE_PATH,
+        )
 
     def test_populated(self):
         """Test the database is populated."""

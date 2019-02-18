@@ -1,13 +1,14 @@
 # -*- coding: utf-8 -*-
 
 """Parsers for Entrez and HomoloGene data."""
+
 import logging
 from typing import Iterable, Mapping, Optional, Tuple
 
 import pandas as pd
 
 from bio2bel.downloading import make_df_getter
-from .constants import (
+from bio2bel_entrez.constants import (
     GENE_INFO_COLUMNS, GENE_INFO_DATA_PATH, GENE_INFO_URL, GENE_REFSEQ_PATH, GENE_REFSEQ_URL,
     HOMOLOGENE_COLUMNS, HOMOLOGENE_DATA_PATH, HOMOLOGENE_URL,
 )
@@ -91,3 +92,43 @@ def get_gene_positions(tax_ids: Optional[Iterable[str]] = None, **kwargs) -> Map
         str(gene_id): (start, end)
         for gene_id, (start, end) in df.iterrows()
     }
+
+
+def _help_get_gene_positions(tax_ids: Optional[Iterable[str]] = None, **kwargs) -> pd.DataFrame:
+    """Get a mapping from Entrez Gene identifiers to the start/end positions."""
+    df: pd.DataFrame = get_refseq_df(**kwargs)
+    if tax_ids is not None:
+        tax_ids = {int(tax_id) for tax_id in tax_ids}
+        logger.info(f'filtering RefSeq to {", ".join(map(str, tax_ids))}')
+        df = df[df['#tax_id'].isin(tax_ids)]
+    return postprocess_refseq_df(df)
+
+
+if __name__ == '__main__':
+    df = make_df_getter(
+        GENE_REFSEQ_URL,
+        GENE_REFSEQ_PATH,
+        sep='\t',
+        index_col='GeneID',
+        # names=GENE_REFSEQ_COLUMNS,
+        na_values=['-', 'NEWENTRY'],
+        usecols=['#tax_id', 'GeneID', 'status', 'start_position_on_the_genomic_accession',
+                 'end_position_on_the_genomic_accession', 'assembly', 'Symbol'],
+    )()
+    # Keep human only
+    df = df[df['#tax_id'] == 9606]
+    # make sure its not suppressed
+    df = df[df['status'] != 'SUPPRESSED']
+    # make sure there's an assembly
+    df = df[df['assembly'].notna()]
+    # only take the stuff we care about,
+    # and drop all the duplicates (there are many, and everything after is unique!)
+    df = df[[
+        'Symbol',
+        'start_position_on_the_genomic_accession',
+        'end_position_on_the_genomic_accession',
+    ]].drop_duplicates()
+
+    df.start_position_on_the_genomic_accession = df.start_position_on_the_genomic_accession.map(int)
+    df.end_position_on_the_genomic_accession = df.end_position_on_the_genomic_accession.map(int)
+    df.to_csv('/Users/cthoyt/Desktop/refseq_human.tsv')
