@@ -58,3 +58,17 @@ CONSORTIUM_SPECIES_MAPPING = {
 
 VALID_ENTREZ_NAMESPACES = {'egid', 'eg', 'entrez', 'ncbigene'}
 VALID_MGI_NAMESPACES = {'mgi', 'mgd'}
+
+ENCODING = {
+    'protein-coding': 'GRP',
+    'miscRNA': 'GR',
+    'ncRNA': 'GR',
+    'snoRNA': 'GR',
+    'snRNA': 'GR',
+    'tRNA': 'GR',
+    'scRNA': 'GR',
+    'other': 'G',
+    'pseudo': 'GR',
+    'unknown': 'GRP',
+    'rRNA': 'GR',
+}

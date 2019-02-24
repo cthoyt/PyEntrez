@@ -9,7 +9,7 @@ from sqlalchemy.ext.declarative import DeclarativeMeta, declarative_base
 from sqlalchemy.orm import backref, relationship
 
 from pybel.dsl import CentralDogma, FUNC_TO_DSL, gene
-from .constants import MODULE_NAME
+from .constants import ENCODING, MODULE_NAME
 
 GENE_TABLE_NAME = f'{MODULE_NAME}_gene'
 GROUP_TABLE_NAME = f'{MODULE_NAME}_homologene'
@@ -75,7 +75,10 @@ class Gene(Base):
     homologene_id = Column(Integer, ForeignKey(f'{Homologene.__tablename__}.id'))
     homologene = relationship(Homologene, backref=backref('genes'))
 
-    bel_encoding = 'GRP'
+    @property
+    def bel_encoding(self) -> str:
+        """Return the BEL encoding."""
+        return ENCODING.get(self.type_of_gene, 'GRP')
 
     def as_bel(self, func=None) -> CentralDogma:
         """Make a PyBEL DSL object from this gene."""
