@@ -32,7 +32,7 @@ HOMOLOGENE_COLUMNS = [
     'gene_id',
     'gene_symbol',
     'protein_gi',
-    'protein_accession'
+    'protein_accession',
 ]
 
 DEFAULT_TAX_IDS = (
@@ -41,13 +41,19 @@ DEFAULT_TAX_IDS = (
     '10116',  # Rat
     '7227',  # Drosophila
     '4932',  # Yeast
+    '6239',  # C. Elegans
+    '7955',  # Zebrafish
+    '9913',  # Cow
+    '9615',  # Dog
 )
 SPECIES_CONSORTIUM_MAPPING = {
-    '10090': 'MGI',
-    '10116': 'RGD',
-    '4932': 'SGD',
-    '7227': 'FLYBASE',
-    '9606': 'HGNC',
+    '10090': 'MGI',  # Mouse
+    '10116': 'RGD',  # Rat
+    '4932': 'SGD',  # Yeast
+    '7227': 'FLYBASE',  # Drosophila
+    '9606': 'HGNC',  # Human
+    '6239': 'WORMBASE',  # C. Elegans
+    '7955': 'ZFIN',  # Zebrafish
 }
 
 #: All namepace codes (in lowercase) that can map to ncbigene
