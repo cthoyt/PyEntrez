@@ -18,7 +18,7 @@ class Manager(AbstractManager, BELNamespaceManagerMixin):
     """Manages the HomoloGene database."""
 
     _base = Base
-    module_name = MODULE_NAME
+    module_name = 'homologene'
 
     namespace_model = Homologene
     has_names = False
