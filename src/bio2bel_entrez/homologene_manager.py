@@ -1,11 +1,10 @@
 # -*- coding: utf-8 -*-
 
-"""Manager for Bio2BEL Entrez."""
+"""Manager for Bio2BEL Homologene."""
 
 from bio2bel import AbstractManager
 from bio2bel.manager.namespace_manager import BELNamespaceManagerMixin
 from pybel.manager.models import Namespace, NamespaceEntry
-from .constants import MODULE_NAME
 from .models import Base, Homologene
 
 __all__ = [
@@ -42,7 +41,11 @@ class Manager(AbstractManager, BELNamespaceManagerMixin):
 
     def is_populated(self) -> bool:
         """Check if the database is populated."""
-        return 0 < self._count_model(self.namespace_model)
+        return 0 < self.count_homologenes()
+
+    def count_homologenes(self) -> int:
+        """Count the number of homologenes in the database."""
+        return self._count_model(self.namespace_model)
 
     def populate(self, *args, **kwargs):
         """Populate the database."""
@@ -50,7 +53,7 @@ class Manager(AbstractManager, BELNamespaceManagerMixin):
 
     def summarize(self):
         """Summarize the database."""
-        raise NotImplementedError
+        return dict(homologenes=self.count_homologenes())
 
 
 main = Manager.get_cli()
