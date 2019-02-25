@@ -333,14 +333,10 @@ class Manager(AbstractManager, BELNamespaceManagerMixin, FlaskMixin):
 
     def normalize_genes(self, graph: BELGraph) -> None:
         """Add identifiers to all Entrez genes."""
-        mapping = {}
-
-        for node, gene_model in self.iter_genes(graph):
-            node_tuple = node.as_tuple()
-            dsl = gene_model.as_bel(func=node.function)
-            graph._node[node_tuple] = dsl
-            mapping[node_tuple] = dsl.as_tuple()
-
+        mapping = {
+            node: gene_model.as_bel(func=node.function)
+            for node, gene_model in self.iter_genes(graph)
+        }
         relabel_nodes(graph, mapping, copy=False)
 
     def enrich_genes_with_homologenes(self, graph: BELGraph) -> None:
