@@ -32,7 +32,7 @@ log = logging.getLogger(__name__)
 
 
 class Manager(AbstractManager, BELNamespaceManagerMixin, FlaskMixin):
-    """Manages the Entrez Gene database."""
+    """Genes and orthologies."""
 
     module_name = MODULE_NAME
     flask_admin_models = [Gene, Homologene, Species, Xref]

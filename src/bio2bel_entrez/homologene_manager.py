@@ -3,9 +3,11 @@
 """Manager for Bio2BEL Homologene."""
 
 from bio2bel import AbstractManager
+from bio2bel.manager.bel_manager import BELManagerMixin
 from bio2bel.manager.namespace_manager import BELNamespaceManagerMixin
+from pybel import BELGraph
 from pybel.manager.models import Namespace, NamespaceEntry
-from .models import Base, Homologene
+from .models import Base, Gene, Homologene
 
 __all__ = [
     'Manager',
@@ -13,8 +15,8 @@ __all__ = [
 ]
 
 
-class Manager(AbstractManager, BELNamespaceManagerMixin):
-    """Manages the HomoloGene database."""
+class Manager(AbstractManager, BELNamespaceManagerMixin, BELManagerMixin):
+    """Gene ortholog group memberships."""
 
     _base = Base
     module_name = 'homologene'
@@ -54,6 +56,17 @@ class Manager(AbstractManager, BELNamespaceManagerMixin):
     def summarize(self):
         """Summarize the database."""
         return dict(homologenes=self.count_homologenes())
+
+    def count_relations(self) -> int:
+        """Count the number of genes with a HomoloGene."""
+        return self.session.query(Gene).filter(Gene.homologene_id.isnot(None)).count()
+
+    def to_bel(self) -> BELGraph:
+        """Convert HomoloGene to BEL."""
+        graph = BELGraph()
+        for homologene, gene in self._get_query(Homologene).join(Gene):
+            graph.add_is_a(gene.as_bel(), homologene.as_bel())
+        return graph
 
 
 main = Manager.get_cli()
