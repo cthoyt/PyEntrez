@@ -35,6 +35,7 @@ class Manager(AbstractManager, BELNamespaceManagerMixin, FlaskMixin):
     """Genes and orthologies."""
 
     module_name = MODULE_NAME
+    _base = Base
     flask_admin_models = [Gene, Homologene, Species, Xref]
 
     namespace_model = Gene
@@ -51,10 +52,6 @@ class Manager(AbstractManager, BELNamespaceManagerMixin, FlaskMixin):
         self.gene_cache = {}
         self.homologene_cache = {}
         self.gene_homologene = {}
-
-    @property
-    def _base(self):
-        return Base
 
     def is_populated(self) -> bool:
         """Check if the database is already populated."""
