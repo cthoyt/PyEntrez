@@ -8,17 +8,17 @@ import time
 from typing import Dict, Iterable, List, Optional, Tuple
 
 import click
-from networkx import relabel_nodes
-from sqlalchemy import and_
-from tqdm import tqdm
-
 from bio2bel import AbstractManager
 from bio2bel.manager.flask_manager import FlaskMixin
 from bio2bel.manager.namespace_manager import BELNamespaceManagerMixin
+from networkx import relabel_nodes
 from pybel import BELGraph
 from pybel.constants import FUNCTION, NAMESPACE
 from pybel.dsl import BaseEntity
 from pybel.manager.models import Namespace, NamespaceEntry
+from sqlalchemy import and_
+from tqdm import tqdm
+
 from .constants import DEFAULT_TAX_IDS, MODULE_NAME, VALID_ENTREZ_NAMESPACES, VALID_MGI_NAMESPACES
 from .homologene_manager import Manager as HomologeneManager
 from .models import Base, Gene, Homologene, Species, Xref
@@ -108,22 +108,11 @@ class Manager(AbstractManager, BELNamespaceManagerMixin, FlaskMixin):
         :param name: RGD gene symbol
         """
         rgd_name_filter = and_(Species.taxonomy_id == '10116', Gene.name == name)
-        return self.session.query(Gene).join(Species).filter(rgd_name_filter).one_or_none()
+        rv = self.session.query(Gene).join(Species).filter(rgd_name_filter).all()
+        return self._return_lowest(name, rv)
 
-    def get_gene_by_mgi_name(self, name: str) -> Optional[Gene]:
-        """Get a gene by its MGI name.
-
-        :param name: MGI gene symbol
-        """
-        mgi_name_filter = and_(Species.taxonomy_id == '10090', Gene.name == name)
-        return self.session.query(Gene).join(Species).filter(mgi_name_filter).one_or_none()
-
-    def get_gene_by_hgnc_name(self, name: str) -> Optional[Gene]:
-        """Get a gene by its HGNC gene symbol."""
-        hgnc_name_filter = and_(Species.taxonomy_id == '9606', Gene.name == name)
-
-        rv = self.session.query(Gene).join(Species).filter(hgnc_name_filter).all()
-
+    @staticmethod
+    def _return_lowest(name, rv):
         if len(rv) == 0:
             return
 
@@ -136,6 +125,21 @@ class Manager(AbstractManager, BELNamespaceManagerMixin, FlaskMixin):
                     name, '\n'.join(map(str, rv)))
 
         return rv[0]
+
+    def get_gene_by_mgi_name(self, name: str) -> Optional[Gene]:
+        """Get a gene by its MGI name.
+
+        :param name: MGI gene symbol
+        """
+        mgi_name_filter = and_(Species.taxonomy_id == '10090', Gene.name == name)
+        rv = self.session.query(Gene).join(Species).filter(mgi_name_filter).all()
+        return self._return_lowest(name, rv)
+
+    def get_gene_by_hgnc_name(self, name: str) -> Optional[Gene]:
+        """Get a gene by its HGNC gene symbol."""
+        hgnc_name_filter = and_(Species.taxonomy_id == '9606', Gene.name == name)
+        rv = self.session.query(Gene).join(Species).filter(hgnc_name_filter).all()
+        return self._return_lowest(name, rv)
 
     def get_or_create_gene(self, entrez_id: str, **kwargs) -> Gene:
         """Get or create a Gene model.
@@ -321,18 +325,23 @@ class Manager(AbstractManager, BELNamespaceManagerMixin, FlaskMixin):
         if namespace.lower() == 'rgd':
             return self._handle_rgd_node(identifier, name)
 
-    def iter_genes(self, graph: BELGraph) -> Iterable[Tuple[BaseEntity, Gene]]:
+    def iter_genes(self, graph: BELGraph, use_tqdm: bool = False) -> Iterable[Tuple[BaseEntity, Gene]]:
         """Iterate over genes in the graph that can be mapped to an Entrez gene."""
-        for node in graph:
+        it = (
+            tqdm(graph, desc='Entrez genes')
+            if use_tqdm else
+            graph
+        )
+        for node in it:
             gene_model = self.lookup_node(node)
             if gene_model is not None:
                 yield node, gene_model
 
-    def normalize_genes(self, graph: BELGraph) -> None:
+    def normalize_genes(self, graph: BELGraph, use_tqdm: bool = False) -> None:
         """Add identifiers to all Entrez genes."""
         mapping = {
             node: gene_model.as_bel(func=node.function)
-            for node, gene_model in self.iter_genes(graph)
+            for node, gene_model in self.iter_genes(graph, use_tqdm=use_tqdm)
         }
         relabel_nodes(graph, mapping, copy=False)
 
