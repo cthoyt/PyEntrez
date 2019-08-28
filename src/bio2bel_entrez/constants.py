@@ -10,7 +10,11 @@ MODULE_NAME = 'ncbigene'
 DATA_DIR = get_data_dir(MODULE_NAME)
 
 GENE_INFO_URL = 'ftp://ftp.ncbi.nlm.nih.gov/gene/DATA/gene_info.gz'
+GENE2REFSEQ_URL = 'ftp://ftp.ncbi.nlm.nih.gov/gene/DATA/gene2refseq.gz'
 GENE_INFO_DATA_PATH = os.path.join(DATA_DIR, 'gene_info.gz')
+GENE2REFSEQ_DATA_PATH = os.path.join(DATA_DIR, 'gene2refseq.gz')
+GENE2REFSEQ_HUMAN_DATA_PATH = os.path.join(DATA_DIR, 'gene2refseq.human')
+GENE2REFSEQ_HUMAN_SLIM_DATA_PATH = os.path.join(DATA_DIR, 'gene2refseq.human.slim')
 HOMOLOGENE_DATA_PATH = os.path.join(DATA_DIR, 'homologene.data')
 
 #: Columns fro gene_info.gz that are used
@@ -78,3 +82,41 @@ ENCODING = {
     'unknown': 'GRP',
     'rRNA': 'GR',
 }
+
+GENE2REFSEQ_HEADER = [
+    '#tax_id',
+    'GeneID',
+    'status',
+    'RNA_nucleotide_accession.version',
+    'RNA_nucleotide_gi',
+    'protein_accession.version',
+    'protein_gi',
+    'genomic_nucleotide_accession.version',
+    'genomic_nucleotide_gi',
+    'start_position_on_the_genomic_accession',
+    'end_position_on_the_genomic_accession',
+    'orientation',
+    'assembly',
+    'mature_peptide_accession.version',
+    'mature_peptide_gi',
+    'Symbol',
+]
+
+GENE2REFSEQ_COLUMNS = [
+    '#tax_id',
+    'GeneID',
+    # 'status',
+    # 'RNA_nucleotide_accession.version',
+    # 'RNA_nucleotide_gi',
+    # 'protein_accession.version',
+    # 'protein_gi',
+    # 'genomic_nucleotide_accession.version',
+    # 'genomic_nucleotide_gi',
+    'start_position_on_the_genomic_accession',
+    'end_position_on_the_genomic_accession',
+    # 'orientation',
+    'assembly',
+    # 'mature_peptide_accession.version',
+    # 'mature_peptide_gi',
+    'Symbol',
+]
