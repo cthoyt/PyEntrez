@@ -5,7 +5,7 @@
 from .homologene_manager import Manager as HomologeneManager  # noqa: F401
 from .manager import Manager  # noqa: F401
 
-__version__ = '0.2.2-dev'
+__version__ = '0.2.2'
 
 __title__ = 'bio2bel_entrez'
 __description__ = "A package for parsing and storing Entrez Gene"
