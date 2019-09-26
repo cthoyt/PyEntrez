@@ -316,14 +316,14 @@ class Manager(AbstractManager, BELNamespaceManagerMixin, FlaskMixin):
         if namespace.lower() in VALID_ENTREZ_NAMESPACES:
             return self._handle_entrez_node(identifier, name)
 
-        if namespace.lower() == 'hgnc':
-            return self._handle_hgnc_node(identifier, name)
-
-        if namespace.lower() in VALID_MGI_NAMESPACES:
-            return self._handle_mgi_node(identifier, name)
-
-        if namespace.lower() == 'rgd':
-            return self._handle_rgd_node(identifier, name)
+        # if namespace.lower() == 'hgnc':
+        #     return self._handle_hgnc_node(identifier, name)
+        #
+        # if namespace.lower() in VALID_MGI_NAMESPACES:
+        #     return self._handle_mgi_node(identifier, name)
+        #
+        # if namespace.lower() == 'rgd':
+        #     return self._handle_rgd_node(identifier, name)
 
     def iter_genes(self, graph: BELGraph, use_tqdm: bool = False) -> Iterable[Tuple[BaseEntity, Gene]]:
         """Iterate over genes in the graph that can be mapped to an Entrez gene."""
