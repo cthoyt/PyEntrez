@@ -25,8 +25,8 @@ CLASSIFIERS = [
     'License :: OSI Approved :: MIT License',
 ]
 INSTALL_REQUIRES = [
-    'pybel>=0.13.0,<0.14.0',
-    'bio2bel>=0.2.0,<0.3.0',
+    'pybel>=0.14.0,<0.15.0',
+    'bio2bel>=0.3.0,<0.4.0',
     'click',
     'pandas',
     'sqlalchemy',
